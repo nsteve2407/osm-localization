@@ -1,2 +1,2 @@
-# pf_node
+# osm-localization
 Particle Filter based localization on OSM
