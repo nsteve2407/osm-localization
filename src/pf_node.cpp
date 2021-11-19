@@ -2,7 +2,6 @@
 #include <sensor_msgs/PointCloud2.h>
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/Vector3.h>
-#include <cnpy.h>
 #include <xtensor.hpp>
 #include <xtensor/xnpy.hpp>
 #include <iostream>
@@ -33,7 +32,7 @@ int main(int argc,char** argv)
 
     // cnpy::NpyArray d_mat = cnpy::npy_load("a.npy");
     
-    auto d_grid = xt::load_npy<_Float64>("/home/msi/catkin_ws/src/pf_node/distance_maps/d_grid.npy");
+    auto d_grid = xt::load_npy<_Float64>("/home/mkz/catkin_ws/src/osm-localization/distance_maps/d_grid.npy");
     // xt::view(d_grid,xt::all(),2);
     auto distance = d_grid(e,n);
     std::cout<<distance<<std::endl;

@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name><osm-localization></osm-localization></name>
+  <name>osm-localization</name>
   <version>0.0.0</version>
   <description>The pf_node package</description>
 

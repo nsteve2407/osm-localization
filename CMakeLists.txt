@@ -211,4 +211,4 @@ include_directories(
 find_package(xtensor REQUIRED)
 
 add_executable(pf_node src/pf_node.cpp)
-target_link_libraries(pf_node ${catkin_LIBRARIES} -xc++)
+target_link_libraries(pf_node ${catkin_LIBRARIES} -xc++ ${xtensor_LIBRARIES})
