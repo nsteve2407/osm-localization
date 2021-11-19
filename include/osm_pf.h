@@ -27,13 +27,13 @@ namespace osmpf
         message_filters::Subscriber<nav_msgs::Odometry> odom_sub;
         message_filters::Subscriber<sensor_msgs::PointCloud2> pc_sub;
         typedef message_filters::sync_policies::ApproximateTime<nav_msgs::Odometry,sensor_msgs::PointCloud2> sync_policy;
-        message_filters::Synchronizer<sync_policy> sync;
+        message_filters::Synchronizer<sync_policy>* sync;
         int num_particles;
-        xt::xarray<f> Xt;
-        xt::xarray<f> Wt;
+        xt::xarray<f>* Xt;
+        xt::xarray<f>* Wt;
         std::string d_mat_path;
         public:
-        osm_pf(std::string path_to_d_mat);
+        osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,int particles=100);
         xt::xarray<f> sample_pose();
         f find_xbar(f x_tminus1,nav_msgs::Odometry odom);
         xt::xarray<f> find_Xbar(xt::xarray<f> X_tminus1,nav_msgs::Odometry odom);
