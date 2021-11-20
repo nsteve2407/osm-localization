@@ -9,10 +9,17 @@
 #include <xtensor.hpp>
 #include <xtensor/xnpy.hpp>
 #include<string>
+#include<vector>
 
 
 namespace osmpf
 {
+    class pose
+    {
+    public:
+    _Float64 x,y;
+    };
+
     class osm_pf
     {
         typedef _Float64 f;
@@ -29,17 +36,17 @@ namespace osmpf
         typedef message_filters::sync_policies::ApproximateTime<nav_msgs::Odometry,sensor_msgs::PointCloud2> sync_policy;
         message_filters::Synchronizer<sync_policy>* sync;
         int num_particles;
-        xt::xarray<f>* Xt;
-        xt::xarray<f>* Wt;
+        std::vector<pose>* Xt;
+        std::vector<f>* Wt;
         std::string d_mat_path;
         public:
         osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,int particles=100);
-        xt::xarray<f> sample_pose();
-        f find_xbar(f x_tminus1,nav_msgs::Odometry odom);
-        xt::xarray<f> find_Xbar(xt::xarray<f> X_tminus1,nav_msgs::Odometry odom);
+        std::vector<pose> sample_pose();
+        pose find_xbar(pose x_tminus1,nav_msgs::Odometry odom);
+        std::vector<pose> find_Xbar(std::vector<pose> X_tminus1,nav_msgs::Odometry odom);
         f find_wt(f xbar,sensor_msgs::PointCloud2 p_cloud);
-        f find_wt_x(float point);
-        xt::xarray<f> find_Wt(xt::xarray<f> Xtbar,sensor_msgs::PointCloud2 p_cloud);
-        xt::xarray<f> sample_xt(xt::xarray<f> Xbar_t,xt::xarray<f> Wt);
+        f find_wt_point(float point);
+        std::vector<f> find_Wt(std::vector<pose> Xtbar,sensor_msgs::PointCloud2 p_cloud);
+        std::vector<pose> sample_xt(std::vector<pose> Xbar_t,std::vector<f> Wt);
     };
 }
