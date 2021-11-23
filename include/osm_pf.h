@@ -10,6 +10,7 @@
 #include <xtensor/xnpy.hpp>
 #include<string>
 #include<vector>
+#include<pcl-1.10/pcl/point_types.h>
 
 
 namespace osmpf
@@ -27,10 +28,10 @@ namespace osmpf
         typedef _Float64 f;
         private:
         xt::xarray<f> d_matrix;
-        f origin_x;
-        f origin_y;
-        f max_x;
-        f max_y;
+        float origin_x;
+        float origin_y;
+        float max_x;
+        float max_y;
         ros::NodeHandle nh;
         ros::Publisher pf_publisher;
         message_filters::Subscriber<nav_msgs::Odometry> odom_sub;
@@ -49,7 +50,7 @@ namespace osmpf
         pose find_xbar(pose x_tminus1,nav_msgs::Odometry odom);
         std::vector<pose> find_Xbar(std::vector<pose> X_tminus1,nav_msgs::Odometry odom);
         f find_wt(f xbar,sensor_msgs::PointCloud2 p_cloud);
-        f find_wt_point(float point);
+        f find_wt_point(pcl::PointXYZI point);
         std::vector<f> find_Wt(std::vector<pose> Xtbar,sensor_msgs::PointCloud2 p_cloud);
         std::vector<pose> sample_xt(std::vector<pose> Xbar_t,std::vector<f> Wt);
     };

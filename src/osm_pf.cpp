@@ -1,4 +1,4 @@
-#include "osm_pf.h"
+#include "include/osm_pf.h"
 #include<random>
 #include<math.h>
 #include<tf/transform_datatypes.h>
@@ -64,5 +64,39 @@ std::vector<pose> osm_pf::find_Xbar(std::vector<pose> X_tminus1,nav_msgs::Odomet
         Xt_bar[i] = find_xbar(X_tminus1[i],odom);
     }
     return Xt_bar;
+
+}
+
+osm_pf::f osm_pf::find_wt_point(pcl::PointXYZI point)
+{
+    auto e = point.x - origin_x;
+    auto n = point.y - origin_y;
+    auto i = point.intensity;
+    f wt,distance,r_w;
+    r_w = (f)8.0;
+
+    if(point.x>origin_x && point.x<max_x && point.y<origin_y && point.y>max_y)
+    {
+        distance = d_matrix(n,e);
+    }
+    else
+    {
+        distance = 100.0;
+    }
+
+    
+    wt = 1/(1+exp(distance-r_w));
+
+    if(i != 255.0)
+    {
+        wt = (f)1 - wt;
+    }
+
+    return wt;
+    
+}
+
+osm_pf::f osm_pf::find_wt(f xbar,sensor_msgs::PointCloud2 p_cloud)
+{
 
 }
