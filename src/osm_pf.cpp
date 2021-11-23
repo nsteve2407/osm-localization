@@ -2,6 +2,9 @@
 #include<random>
 #include<math.h>
 #include<tf/transform_datatypes.h>
+#include<pcl_ros/transforms.h>
+#include<Eigen/Core>
+#include<pcl_conversions/pcl_conversions.h>
 
 using namespace osmpf;
 
@@ -96,7 +99,20 @@ osm_pf::f osm_pf::find_wt_point(pcl::PointXYZI point)
     
 }
 
-osm_pf::f osm_pf::find_wt(f xbar,sensor_msgs::PointCloud2 p_cloud)
+osm_pf::f osm_pf::find_wt(pose xbar,sensor_msgs::PointCloud2 p_cloud)
 {
+    Eigen::Matrix4f T;
+    T<<cos(xbar.theta), -sin(xbar.theta),0, xbar.x,
+       sin(xbar.theta), cos(xbar.theta), 0, xbar.y,
+       0, 0, 1,0,
+       0,0,0,1;
+    
+    sensor_msgs::PointCloud2 p_cloud_mapFrame;
+    pcl_ros::transformPointCloud(T,p_cloud,p_cloud_mapFrame);
+    pcl::PointCloud<pcl::PointXYZI> pcl_cloud;
+
+    pcl::fromROSMsg(p_cloud_mapFrame,pcl_cloud);
+    
+    // pcl_cloud.points.
 
 }

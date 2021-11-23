@@ -49,7 +49,7 @@ namespace osmpf
         void init_particles();
         pose find_xbar(pose x_tminus1,nav_msgs::Odometry odom);
         std::vector<pose> find_Xbar(std::vector<pose> X_tminus1,nav_msgs::Odometry odom);
-        f find_wt(f xbar,sensor_msgs::PointCloud2 p_cloud);
+        f find_wt(pose xbar,sensor_msgs::PointCloud2 p_cloud);
         f find_wt_point(pcl::PointXYZI point);
         std::vector<f> find_Wt(std::vector<pose> Xtbar,sensor_msgs::PointCloud2 p_cloud);
         std::vector<pose> sample_xt(std::vector<pose> Xbar_t,std::vector<f> Wt);
