@@ -18,6 +18,8 @@ namespace osmpf
     {
     public:
     _Float64 x,y;
+    _Float64 theta;
+    pose(_Float64 _x,_Float64 _y,_Float64 _theta){x = _x; y = _y; theta = _theta;}
     };
 
     class osm_pf
@@ -36,12 +38,12 @@ namespace osmpf
         typedef message_filters::sync_policies::ApproximateTime<nav_msgs::Odometry,sensor_msgs::PointCloud2> sync_policy;
         message_filters::Synchronizer<sync_policy>* sync;
         int num_particles;
-        std::vector<pose>* Xt;
-        std::vector<f>* Wt;
-        std::string d_mat_path;
+        std::shared_ptr<std::vector<pose>> Xt;
+        std::shared_ptr<std::vector<f>> Wt;
+    
         public:
         osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,int particles=100);
-        std::vector<pose> sample_pose();
+        void init_particles();
         pose find_xbar(pose x_tminus1,nav_msgs::Odometry odom);
         std::vector<pose> find_Xbar(std::vector<pose> X_tminus1,nav_msgs::Odometry odom);
         f find_wt(f xbar,sensor_msgs::PointCloud2 p_cloud);
