@@ -84,16 +84,24 @@ osm_pf::f osm_pf::find_wt_point(pcl::PointXYZI point)
     }
     else
     {
-        distance = 100.0;
+        distance = -1.0;
     }
 
-    
-    wt = 1/(1+exp(distance-r_w));
-
-    if(i != 255.0)
+    if(distance>0.0)
     {
-        wt = (f)1 - wt;
+        wt = 1/(1+exp(distance-r_w));
+        if(i != 255.0)
+        {
+            wt = (f)1 - wt;
+        }
     }
+    else
+    {
+        wt =1.0;
+    }
+    
+
+
 
     return wt;
     
@@ -113,6 +121,18 @@ osm_pf::f osm_pf::find_wt(pose xbar,sensor_msgs::PointCloud2 p_cloud)
 
     pcl::fromROSMsg(p_cloud_mapFrame,pcl_cloud);
     
-    // pcl_cloud.points.
+    f weight = 1;
+    for(auto x : pcl_cloud.points)
+    {
+        weight = weight*find_wt_point(x);
+    }
+
+    return weight;
+
+
+}
+
+std::vector<osm_pf::f> osm_pf::find_Wt(std::vector<pose> Xtbar,sensor_msgs::PointCloud2 p_cloud)
+{
 
 }
