@@ -19,6 +19,7 @@ namespace osmpf
     public:
     _Float64 x,y;
     _Float64 theta;
+    pose(){x=0.0;y=0.0;theta=0.0;}
     pose(_Float64 _x,_Float64 _y,_Float64 _theta){x = _x; y = _y; theta = _theta;}
     };
 

@@ -13,11 +13,14 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   pcl_ros
+  message_filters
   # sensor_msgs/PointCloud2
 )
 find_package(
   xtensor REQUIRED
-  PCL REQUIRED)
+  PCL REQUIRED
+  Boost REQUIRED
+  Eigen3 REQUIRED)
 
 catkin_package(
 #  INCLUDE_DIRS include
@@ -41,4 +44,8 @@ include
 add_library(osmpf /home/mkz/catkin_ws/src/osm-localization/src/osm_pf.cpp)
 
 add_executable(pf_node src/pf_node.cpp)
-target_link_libraries(pf_node osmpf ${catkin_LIBRARIES} -xc++ ${xtensor_LIBRARIES} ${PCL_LIBRARIES})
+target_link_libraries(pf_node osmpf ${catkin_LIBRARIES} -xc++ 
+${xtensor_LIBRARIES} 
+${PCL_LIBRARIES}
+${Boost_LIBRARIES}
+${Eigen3_LIBRARIES})

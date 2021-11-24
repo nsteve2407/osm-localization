@@ -191,5 +191,5 @@ void osm_pf::callback(nav_msgs::Odometry u,sensor_msgs::PointCloud2 z)
 
 void osm_pf::run()
 {
-    sync->registerCallback(boost::bind(&callback,_1,_2));
+    sync->registerCallback(boost::bind(&osmpf::osm_pf::callback,_1,_2));
 }
