@@ -170,6 +170,20 @@ void osm_pf::callback(nav_msgs::Odometry u,sensor_msgs::PointCloud2 z)
     Xt = X_t_est;
     Wt = Wt_est;
 
-    geometry_msgs::Vector3 msg();
-    
+    geometry_msgs::PoseArray msg;
+    geometry_msgs::Quaternion q;
+    geometry_msgs::Point position;
+    geometry_msgs::Pose p;
+    for(pose x: X_t_est)
+    {
+        q = tf::createQuaternionMsgFromYaw(x.theta);
+        position.x = x.x;
+        position.y = x.y;
+        position.z = 0.0;
+        p.position = position;
+        p.orientation = q;
+        msg.poses.push_back(p);  
+    }
+
+    pf_publisher.publish(msg);    
 }
