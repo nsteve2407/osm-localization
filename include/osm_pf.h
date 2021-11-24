@@ -53,5 +53,6 @@ namespace osmpf
         std::vector<f> find_Wt(std::vector<pose> Xtbar,sensor_msgs::PointCloud2 p_cloud);
         std::vector<pose> sample_xt(std::vector<pose> Xbar_t,std::vector<f> Wt);
         void callback(nav_msgs::Odometry,sensor_msgs::PointCloud2);
+        void run();
     };
 }

@@ -187,3 +187,8 @@ void osm_pf::callback(nav_msgs::Odometry u,sensor_msgs::PointCloud2 z)
 
     pf_publisher.publish(msg);    
 }
+
+void osm_pf::run()
+{
+    sync->registerCallback(boost::bind(&callback,_1,_2));
+}
