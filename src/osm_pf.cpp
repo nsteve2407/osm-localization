@@ -134,5 +134,29 @@ osm_pf::f osm_pf::find_wt(pose xbar,sensor_msgs::PointCloud2 p_cloud)
 
 std::vector<osm_pf::f> osm_pf::find_Wt(std::vector<pose> Xtbar,sensor_msgs::PointCloud2 p_cloud)
 {
+    std::vector<f> weights;
+    f weight;
+    for(pose p: Xtbar)
+    {
+        weight=find_wt(p,p_cloud);
+        weights.push_back(weight);
+    }
 
+    return weights;
+}
+
+std::vector<pose> osm_pf::sample_xt(std::vector<pose> Xbar_t,std::vector<f> Wt)
+{
+    std::vector<pose> Xt;
+
+    std::default_random_engine generator;
+    std::discrete_distribution<f> distribution;
+
+    for(int i=0;i<Xbar_t.size();i++)
+    {
+        int idx = distribution(generator);
+        Xt.push_back(Xbar_t[idx]);
+    }
+
+    return Xt;
 }
