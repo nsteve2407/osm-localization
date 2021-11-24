@@ -5,7 +5,6 @@
 #include<message_filters/sync_policies/approximate_time.h>
 #include<nav_msgs/Odometry.h>
 #include<sensor_msgs/PointCloud2.h>
-#include <geometry_msgs/Vector3.h>
 #include <xtensor.hpp>
 #include <xtensor/xnpy.hpp>
 #include<string>
@@ -53,5 +52,6 @@ namespace osmpf
         f find_wt_point(pcl::PointXYZI point);
         std::vector<f> find_Wt(std::vector<pose> Xtbar,sensor_msgs::PointCloud2 p_cloud);
         std::vector<pose> sample_xt(std::vector<pose> Xbar_t,std::vector<f> Wt);
+        void callback(nav_msgs::Odometry,sensor_msgs::PointCloud2);
     };
 }

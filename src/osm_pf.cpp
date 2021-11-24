@@ -5,7 +5,7 @@
 #include<pcl_ros/transforms.h>
 #include<Eigen/Core>
 #include<pcl_conversions/pcl_conversions.h>
-
+#include<geometry_msgs/PoseArray.h>
 using namespace osmpf;
 
 osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,int particles)
@@ -16,7 +16,7 @@ osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,int par
     origin_y = min_y;
     max_x = Max_x;
     max_y = Max_y;
-    pf_publisher = nh.advertise<geometry_msgs::Vector3>("oms_pose",100);
+    pf_publisher = nh.advertise<geometry_msgs::PoseArray>("oms_pose_estimate",100);
     odom_sub.subscribe(nh,"odometry_topic",100);
     pc_sub.subscribe(nh,"os_cloud_node/points",100);
     sync = new message_filters::Synchronizer<sync_policy>(sync_policy(10),odom_sub,pc_sub);
@@ -159,4 +159,17 @@ std::vector<pose> osm_pf::sample_xt(std::vector<pose> Xbar_t,std::vector<f> Wt)
     }
 
     return Xt;
+}
+
+void osm_pf::callback(nav_msgs::Odometry u,sensor_msgs::PointCloud2 z)
+{
+    init_particles();
+    std::vector<pose> Xbar = find_Xbar(Xt,u);
+    std::vector<f> Wt_est  = find_Wt(Xbar,z);
+    std::vector<pose> X_t_est = sample_xt(Xbar,Wt);
+    Xt = X_t_est;
+    Wt = Wt_est;
+
+    geometry_msgs::Vector3 msg();
+    
 }
