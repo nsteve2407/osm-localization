@@ -12,9 +12,12 @@ find_package(catkin REQUIRED COMPONENTS
   # nav_msgs/Odometry
   roscpp
   rospy
+  pcl_ros
   # sensor_msgs/PointCloud2
 )
-
+find_package(
+  xtensor REQUIRED
+  PCL REQUIRED)
 
 catkin_package(
 #  INCLUDE_DIRS include
@@ -30,12 +33,12 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
-# include
+include
   ${catkin_INCLUDE_DIRS}
+  ${PCL_INCLUDE_DIRS}
+
 )
-
-
-find_package(xtensor REQUIRED)
+add_library(osmpf /home/mkz/catkin_ws/src/osm-localization/src/osm_pf.cpp)
 
 add_executable(pf_node src/pf_node.cpp)
-target_link_libraries(pf_node ${catkin_LIBRARIES} -xc++ ${xtensor_LIBRARIES})
+target_link_libraries(pf_node osmpf ${catkin_LIBRARIES} -xc++ ${xtensor_LIBRARIES} ${PCL_LIBRARIES})

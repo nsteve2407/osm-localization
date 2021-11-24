@@ -5,7 +5,7 @@
 #include <xtensor.hpp>
 #include <xtensor/xnpy.hpp>
 #include <iostream>
-#include "include/osm_pf.h"
+#include "osm_pf.h"
 
 
 typedef _Float64 f;
