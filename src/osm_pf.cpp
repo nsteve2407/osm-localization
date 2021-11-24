@@ -26,6 +26,7 @@ osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,int par
     // Wt = std::make_shared<std::vector<f>>();
     Xt = std::vector<pose>(num_particles);
     Wt = std::vector<f>(num_particles);
+    init_particles();
 }
 
 void osm_pf::init_particles()
@@ -163,7 +164,7 @@ std::vector<pose> osm_pf::sample_xt(std::vector<pose> Xbar_t,std::vector<f> Wt)
 
 void osm_pf::callback(nav_msgs::Odometry u,sensor_msgs::PointCloud2 z)
 {
-    init_particles();
+    
     std::vector<pose> Xbar = find_Xbar(Xt,u);
     std::vector<f> Wt_est  = find_Wt(Xbar,z);
     std::vector<pose> X_t_est = sample_xt(Xbar,Wt);
