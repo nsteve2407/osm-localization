@@ -11,7 +11,6 @@
 #include<vector>
 #include<pcl-1.10/pcl/point_types.h>
 
-
 namespace osmpf
 {
     class pose
@@ -37,7 +36,8 @@ namespace osmpf
         message_filters::Subscriber<nav_msgs::Odometry> odom_sub;
         message_filters::Subscriber<sensor_msgs::PointCloud2> pc_sub;
         typedef message_filters::sync_policies::ApproximateTime<nav_msgs::Odometry,sensor_msgs::PointCloud2> sync_policy;
-        message_filters::Synchronizer<sync_policy>* sync;
+        typedef message_filters::Synchronizer<sync_policy> Sync;
+        std::shared_ptr<Sync> sync;
         int num_particles;
         // std::shared_ptr<std::vector<pose>> Xt;
         // std::shared_ptr<std::vector<f>> Wt;
@@ -53,7 +53,7 @@ namespace osmpf
         f find_wt_point(pcl::PointXYZI point);
         std::vector<f> find_Wt(std::vector<pose> Xtbar,sensor_msgs::PointCloud2 p_cloud);
         std::vector<pose> sample_xt(std::vector<pose> Xbar_t,std::vector<f> Wt);
-        void callback(nav_msgs::Odometry,sensor_msgs::PointCloud2);
+        void callback(const nav_msgs::OdometryConstPtr&,const sensor_msgs::PointCloud2ConstPtr&);
         void run();
     };
 }

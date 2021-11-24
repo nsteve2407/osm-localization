@@ -6,6 +6,7 @@
 #include<Eigen/Core>
 #include<pcl_conversions/pcl_conversions.h>
 #include<geometry_msgs/PoseArray.h>
+#include<boost/bind.hpp>
 using namespace osmpf;
 
 osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,int particles)
@@ -19,7 +20,7 @@ osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,int par
     pf_publisher = nh.advertise<geometry_msgs::PoseArray>("oms_pose_estimate",100);
     odom_sub.subscribe(nh,"odometry_topic",100);
     pc_sub.subscribe(nh,"os_cloud_node/points",100);
-    sync = new message_filters::Synchronizer<sync_policy>(sync_policy(10),odom_sub,pc_sub);
+    sync.reset(new Sync(sync_policy(10),odom_sub,pc_sub)) ;
     cov_lin = (f)25;
     cov_angular = (f)M_PI_2;
     // Xt = std::make_shared<std::vector<pose>>();
@@ -151,7 +152,7 @@ std::vector<pose> osm_pf::sample_xt(std::vector<pose> Xbar_t,std::vector<f> Wt)
     std::vector<pose> Xt;
 
     std::default_random_engine generator;
-    std::discrete_distribution<f> distribution;
+    std::discrete_distribution<int> distribution(Wt.begin(),Wt.end());
 
     for(int i=0;i<Xbar_t.size();i++)
     {
@@ -162,8 +163,10 @@ std::vector<pose> osm_pf::sample_xt(std::vector<pose> Xbar_t,std::vector<f> Wt)
     return Xt;
 }
 
-void osm_pf::callback(nav_msgs::Odometry u,sensor_msgs::PointCloud2 z)
+void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs::PointCloud2ConstPtr& z_ptr)
 {
+    nav_msgs::Odometry u = *u_ptr;
+    sensor_msgs::PointCloud2 z = *z_ptr;
     
     std::vector<pose> Xbar = find_Xbar(Xt,u);
     std::vector<f> Wt_est  = find_Wt(Xbar,z);
@@ -191,5 +194,5 @@ void osm_pf::callback(nav_msgs::Odometry u,sensor_msgs::PointCloud2 z)
 
 void osm_pf::run()
 {
-    sync->registerCallback(boost::bind(&osmpf::osm_pf::callback,_1,_2));
+    sync->registerCallback(boost::bind(&osm_pf::callback,this,_1,_2));
 }
