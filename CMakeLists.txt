@@ -50,3 +50,6 @@ ${xtensor_LIBRARIES}
 ${PCL_LIBRARIES}
 ${Boost_LIBRARIES}
 ${Eigen3_LIBRARIES})
+
+add_executable(pose_cov src/pose_cov.cpp)
+target_link_libraries(pose_cov ${catkin_LIBRARIES} ${Boost_LIBRARIES})
