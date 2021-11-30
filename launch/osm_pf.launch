@@ -1,0 +1,5 @@
+<launch>
+
+<node name="OSM particle filter" pkg="osm-localization" type="pf_node">
+    <rosparam command="load" file="$(find osm-localization)/config/config.yaml" />
+</node>

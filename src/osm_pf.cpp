@@ -19,7 +19,7 @@ osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,int par
     max_x = Max_x;
     max_y = Max_y;
     pf_publisher = nh.advertise<geometry_msgs::PoseArray>("osm_pose_estimate",100);
-    odom_sub.subscribe(nh,"odometry_topic",100);
+    odom_sub.subscribe(nh,"/odometry/filtered",100);
     pc_sub.subscribe(nh,"road_points",100);
     sync.reset(new Sync(sync_policy(10),odom_sub,pc_sub)) ;
     cov_lin = (f)25;
