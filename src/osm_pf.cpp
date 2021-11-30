@@ -6,6 +6,7 @@
 #include<Eigen/Core>
 #include<pcl_conversions/pcl_conversions.h>
 #include<geometry_msgs/PoseArray.h>
+#include<geometry_msgs/Quaternion.h>
 #include<boost/bind.hpp>
 using namespace osmpf;
 
@@ -19,7 +20,7 @@ osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,int par
     max_y = Max_y;
     pf_publisher = nh.advertise<geometry_msgs::PoseArray>("osm_pose_estimate",100);
     odom_sub.subscribe(nh,"odometry_topic",100);
-    pc_sub.subscribe(nh,"os_cloud_node/points",100);
+    pc_sub.subscribe(nh,"road_points",100);
     sync.reset(new Sync(sync_policy(10),odom_sub,pc_sub)) ;
     cov_lin = (f)25;
     cov_angular = (f)M_PI_2;
@@ -28,6 +29,19 @@ osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,int par
     Xt = std::vector<pose>(num_particles);
     Wt = std::vector<f>(num_particles);
     init_particles();
+    prev_odom.pose.pose.position.x = 0.;
+    prev_odom.pose.pose.position.y = 0.;
+    prev_odom.pose.pose.position.z = 0.;
+    prev_odom.pose.pose.orientation.x = 0.;
+    prev_odom.pose.pose.orientation.y = 0.;
+    prev_odom.pose.pose.orientation.z = 0.;
+    prev_odom.pose.pose.orientation.w = 0.;
+    prev_odom.twist.twist.linear.x = 0.;
+    prev_odom.twist.twist.linear.y = 0.;
+    prev_odom.twist.twist.linear.z = 0.;
+    prev_odom.twist.twist.angular.x = 0.;
+    prev_odom.twist.twist.angular.y = 0.;
+    prev_odom.twist.twist.angular.z = 0.;
 }
 
 void osm_pf::init_particles()
@@ -49,9 +63,14 @@ void osm_pf::init_particles()
 
 pose osm_pf::find_xbar(pose x_tminus1,nav_msgs::Odometry odom)
 {
-    f dx = odom.pose.pose.position.x;
-    f dy = odom.pose.pose.position.y;
-    f dtheta =  tf::getYaw(odom.pose.pose.orientation); //check sign converntions
+    f dx = odom.pose.pose.position.x - prev_odom.pose.pose.position.x;
+    f dy = odom.pose.pose.position.y - - prev_odom.pose.pose.position.y;
+    geometry_msgs::Quaternion dq;
+    dq.x = odom.pose.pose.orientation.x - prev_odom.pose.pose.orientation.x;
+    dq.y = odom.pose.pose.orientation.y - prev_odom.pose.pose.orientation.y;
+    dq.z = odom.pose.pose.orientation.z - prev_odom.pose.pose.orientation.z;
+    dq.w = odom.pose.pose.orientation.w - prev_odom.pose.pose.orientation.w;
+    f dtheta =  tf::getYaw(dq); //check sign conversions
 
     std::default_random_engine generator;
     std::normal_distribution<f> dist_x(x_tminus1.x+dx,cov_lin);

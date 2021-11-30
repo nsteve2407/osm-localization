@@ -10,6 +10,7 @@
 #include<string>
 #include<vector>
 #include<pcl-1.10/pcl/point_types.h>
+#include<nav_msgs/Odometry.h>
 
 namespace osmpf
 {
@@ -26,6 +27,7 @@ namespace osmpf
     {
         typedef _Float64 f;
         private:
+        // Attributes
         xt::xarray<f> d_matrix;
         float origin_x;
         float origin_y;
@@ -44,7 +46,9 @@ namespace osmpf
         std::vector<pose> Xt;
         std::vector<f> Wt;
         f cov_lin, cov_angular;
+        nav_msgs::Odometry prev_odom;
         public:
+        // Methods
         osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,int particles=100);
         void init_particles();
         pose find_xbar(pose x_tminus1,nav_msgs::Odometry odom);
