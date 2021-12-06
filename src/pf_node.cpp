@@ -48,8 +48,12 @@ int main(int argc,char** argv)
     // auto c= d_grid(0,0)
     // printf(d_grid(0,0));
 
+    while (ros::ok())
+    {
+        ros::spinOnce();
+    }
 
-    ros::spin();
+    
     std::cout<<"Exiting Particle Filter..."<<std::endl;
 
     

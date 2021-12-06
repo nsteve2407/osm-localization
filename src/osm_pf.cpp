@@ -47,16 +47,18 @@ osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,int par
 
 void osm_pf::init_particles()
 {
-    std::default_random_engine generator;
+    // std::default_random_engine generator;
+    std::random_device rd;
+    std::mt19937 gen(rd());
     std::uniform_real_distribution<f> distribution_x(origin_x,max_x);
     std::uniform_real_distribution<f> distribution_y(origin_y,max_y);
     std::uniform_real_distribution<f> distribution_theta(0,(f)M_PI*2);
 
     for(int i=0;i<num_particles;i++)
     {
-        f _x = distribution_x(generator);
-        f _y = distribution_y(generator);
-        f _theta = distribution_theta(generator);
+        f _x = distribution_x(gen);
+        f _y = distribution_y(gen);
+        f _theta = distribution_theta(gen);
         pose p(_x,_y,_theta);
         Xt[i]=p;
     }    
@@ -73,11 +75,13 @@ pose osm_pf::find_xbar(pose x_tminus1,nav_msgs::Odometry odom)
     dq.w = odom.pose.pose.orientation.w - prev_odom.pose.pose.orientation.w;
     f dtheta =  tf::getYaw(dq); //check sign conversions
 
-    std::default_random_engine generator;
+    // std::default_random_engine generator;
+    std::random_device rd;
+    std::mt19937 gen(rd());
     std::normal_distribution<f> dist_x(x_tminus1.x+dx,cov_lin);
     std::normal_distribution<f> dist_y(x_tminus1.y+dy,cov_lin);
     std::normal_distribution<f> dist_theta(x_tminus1.theta+dtheta,cov_angular);
-    pose p_k_bar(dist_x(generator),dist_y(generator),dist_theta(generator));
+    pose p_k_bar(dist_x(gen),dist_y(gen),dist_theta(gen));
     return p_k_bar;
 }
 
@@ -100,7 +104,7 @@ osm_pf::f osm_pf::find_wt_point(pcl::PointXYZI point)
     f wt,distance,r_w;
     r_w = (f)8.0;
 
-    if(point.x>origin_x && point.x<max_x && point.y<origin_y && point.y>max_y)
+    if(point.x>origin_x && point.x<max_x && point.y>origin_y && point.y<max_y)
     {
         distance = d_matrix(n,e);
     }
@@ -119,7 +123,7 @@ osm_pf::f osm_pf::find_wt_point(pcl::PointXYZI point)
     }
     else
     {
-        wt =1.0;
+        wt =0.0; //Need to test this
     }
     
 
@@ -169,18 +173,20 @@ std::vector<osm_pf::f> osm_pf::find_Wt(std::vector<pose> Xtbar,sensor_msgs::Poin
 
 std::vector<pose> osm_pf::sample_xt(std::vector<pose> Xbar_t,std::vector<f> Wt)
 {
-    std::vector<pose> Xt;
+    std::vector<pose> Xt_gen;
 
-    std::default_random_engine generator;
+    // std::default_random_engine generator;
+    std::random_device rd;
+    std::mt19937 gen(rd());
     std::discrete_distribution<int> distribution(Wt.begin(),Wt.end());
 
     for(int i=0;i<Xbar_t.size();i++)
     {
-        int idx = distribution(generator);
-        Xt.push_back(Xbar_t[idx]);
+        int idx = distribution(gen);
+        Xt_gen.push_back(Xbar_t[idx]);
     }
 
-    return Xt;
+    return Xt_gen;
 }
 
 void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs::PointCloud2ConstPtr& z_ptr)
@@ -208,6 +214,7 @@ void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs:
         p.orientation = q;
         msg.poses.push_back(p);  
     }
+    msg.header.frame_id = "map";
 
     pf_publisher.publish(msg);    
 }
