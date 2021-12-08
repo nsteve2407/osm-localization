@@ -29,7 +29,7 @@ int main(int argc,char** argv)
 
     ROS_INFO("Starting Particle Filter...");
     
-    std::shared_ptr<osmpf::osm_pf> pf_ptr(new osmpf::osm_pf (path,min_x,min_y,max_x,max_y,500));
+    std::shared_ptr<osmpf::osm_pf> pf_ptr(new osmpf::osm_pf (path,min_x,min_y,max_x,max_y,1000));
    
     // // Run Particle Filter
     pf_ptr->run();
@@ -61,3 +61,6 @@ int main(int argc,char** argv)
     return 0;
     
 }
+
+// Current bug:: Initial selection going wrong..all points get roughly weight 1 only one has and then it selects the same one in the next step for all particles afer that particles diverge
+// Consider starting at nodes?

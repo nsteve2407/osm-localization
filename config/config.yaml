@@ -1,5 +1,10 @@
-path_to_dmat  : /home/mkz/catkin_ws/src/osm-localization/distance_maps/d_grid_cs.npy
-min_x : 750483.2018
-max_x : 777875.8610
-min_y : 3368749.3706
-max_y : 3406454.5780
+path_to_dmat  : /home/mkz/catkin_ws/src/osm-localization/distance_maps/d_grid_tamu.npy
+# min_x : 750483.2018
+# max_x : 777875.8610
+# min_y : 3368749.3706
+# max_y : 3406454.5780
+
+min_x : 754466.0
+max_x : 754566.0
+min_y : 3388480.94
+max_y : 3389480.94

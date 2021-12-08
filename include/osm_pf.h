@@ -11,6 +11,9 @@
 #include<vector>
 #include<pcl-1.10/pcl/point_types.h>
 #include<nav_msgs/Odometry.h>
+#include <pcl/point_types.h>
+#include <pcl/filters/passthrough.h>
+#include <pcl/point_cloud.h>
 
 namespace osmpf
 {
@@ -58,6 +61,7 @@ namespace osmpf
         std::vector<f> find_Wt(std::vector<pose> Xtbar,sensor_msgs::PointCloud2 p_cloud);
         std::vector<pose> sample_xt(std::vector<pose> Xbar_t,std::vector<f> Wt);
         void callback(const nav_msgs::OdometryConstPtr&,const sensor_msgs::PointCloud2ConstPtr&);
+        pcl::PointCloud<pcl::PointXYZI> drop_zeros(sensor_msgs::PointCloud2 p_cloud);
         void run();
     };
 }

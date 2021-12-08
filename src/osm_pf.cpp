@@ -8,6 +8,9 @@
 #include<geometry_msgs/PoseArray.h>
 #include<geometry_msgs/Quaternion.h>
 #include<boost/bind.hpp>
+#include <pcl/common/transforms.h>
+#include<iostream>
+#include<algorithm>
 using namespace osmpf;
 
 osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,int particles)
@@ -102,7 +105,7 @@ osm_pf::f osm_pf::find_wt_point(pcl::PointXYZI point)
     auto n = point.y - origin_y;
     auto i = point.intensity;
     f wt,distance,r_w;
-    r_w = (f)8.0;
+    r_w = (f)20.0;
 
     if(point.x>origin_x && point.x<max_x && point.y>origin_y && point.y<max_y)
     {
@@ -115,11 +118,17 @@ osm_pf::f osm_pf::find_wt_point(pcl::PointXYZI point)
 
     if(distance>0.0)
     {
-        wt = 1/(1+exp(distance-r_w));
+        wt = 1.0 - std::min(distance/r_w,1.0);
+        if(i = 255.0)
+        {
+        //    ROS_INFO("Got road point");
+           return wt;
+        }
         if(i != 255.0)
         {
-            wt = (f)1 - wt;
+            wt = (f)1.0 - wt;
         }
+
     }
     else
     {
@@ -133,24 +142,49 @@ osm_pf::f osm_pf::find_wt_point(pcl::PointXYZI point)
     
 }
 
+pcl::PointCloud<pcl::PointXYZI> osm_pf::drop_zeros(sensor_msgs::PointCloud2 p_cloud)
+{
+    pcl::PointCloud<pcl::PointXYZI>out_cloud ;
+    pcl::PointCloud<pcl::PointXYZI> pcl_cloud;
+    pcl::fromROSMsg(p_cloud,pcl_cloud);
+
+    // std::cout<<"Incloud size before dropping zeros: "<<pcl_cloud.points.size()<<std::endl;
+
+
+    for(auto point : pcl_cloud.points)
+    {
+        if(point.x*point.x > 0.01 && point.y*point.y> 0.01 &&  point.z*point.z> 0.01 & std::sqrt(point.x*point.x+point.y*point.y+point.z*point.z) <10)
+        {
+            out_cloud.points.push_back(point);
+        }
+    }
+    // std::cout<<"Outcloud size after dropping zeros: "<<out_cloud.points.size()<<std::endl;
+    return out_cloud;
+}
+
 osm_pf::f osm_pf::find_wt(pose xbar,sensor_msgs::PointCloud2 p_cloud)
 {
+    pcl::PointCloud<pcl::PointXYZI> p_cloud_ptr= drop_zeros(p_cloud);
+    // std::cout<<"Outcloud size in function after dropping zeros: "<<p_cloud_ptr.points.size()<<std::endl;
     Eigen::Matrix4f T;
     T<<cos(xbar.theta), -sin(xbar.theta),0, xbar.x,
        sin(xbar.theta), cos(xbar.theta), 0, xbar.y,
        0, 0, 1,0,
        0,0,0,1;
     
-    sensor_msgs::PointCloud2 p_cloud_mapFrame;
-    pcl_ros::transformPointCloud(T,p_cloud,p_cloud_mapFrame);
-    pcl::PointCloud<pcl::PointXYZI> pcl_cloud;
+    pcl::PointCloud<pcl::PointXYZI> pcl_cloud_map_frame;
+    pcl::transformPointCloud(p_cloud_ptr,pcl_cloud_map_frame,T);
 
-    pcl::fromROSMsg(p_cloud_mapFrame,pcl_cloud);
     
     f weight = 1;
-    for(auto x : pcl_cloud.points)
+    for(auto x : pcl_cloud_map_frame.points)
     {
-        weight = weight*find_wt_point(x);
+        f w = find_wt_point(x);
+        // if(w>0.)
+        // {
+        //     ROS_INFO("valid point");
+        // }
+        weight += w;
     }
 
     return weight;
