@@ -71,13 +71,11 @@ pose osm_pf::find_xbar(pose x_tminus1,nav_msgs::Odometry odom)
 {
     f dx = odom.pose.pose.position.x - prev_odom.pose.pose.position.x;
     f dy = odom.pose.pose.position.y - - prev_odom.pose.pose.position.y;
-    geometry_msgs::Quaternion dq;
-    dq.x = odom.pose.pose.orientation.x - prev_odom.pose.pose.orientation.x;
-    dq.y = odom.pose.pose.orientation.y - prev_odom.pose.pose.orientation.y;
-    dq.z = odom.pose.pose.orientation.z - prev_odom.pose.pose.orientation.z;
-    dq.w = odom.pose.pose.orientation.w - prev_odom.pose.pose.orientation.w;
-    f dtheta =  tf::getYaw(dq); //check sign conversions
-    prev_odom = odom;
+    geometry_msgs::Quaternion q_new = odom.pose.pose.orientation;   
+    geometry_msgs::Quaternion q_old = this->prev_odom.pose.pose.orientation;
+
+    f dtheta =  tf::getYaw(q_new) -tf::getYaw(q_old);; //check sign conversions
+    this->prev_odom = odom;
 
     // std::default_random_engine generator;
     std::random_device rd;
