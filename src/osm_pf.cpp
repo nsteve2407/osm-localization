@@ -77,6 +77,7 @@ pose osm_pf::find_xbar(pose x_tminus1,nav_msgs::Odometry odom)
     dq.z = odom.pose.pose.orientation.z - prev_odom.pose.pose.orientation.z;
     dq.w = odom.pose.pose.orientation.w - prev_odom.pose.pose.orientation.w;
     f dtheta =  tf::getYaw(dq); //check sign conversions
+    prev_odom = odom;
 
     // std::default_random_engine generator;
     std::random_device rd;
