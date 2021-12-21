@@ -14,9 +14,9 @@
 
 <!-- <node name="rviz" pkg ="rviz" type="rviz" args="-d $(find osm-localization)/osm_pf.rviz" /> -->
 
-<node name="osm_particle_filter" pkg="osm-localization" type="pf_node">
+<!-- <node name="osm_particle_filter" pkg="osm-localization" type="pf_node">
     <rosparam command="load" file="$(find osm-localization)/config/config.yaml" />
 
 
-</node>
+</node> -->
 </launch>

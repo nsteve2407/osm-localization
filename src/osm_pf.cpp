@@ -11,26 +11,33 @@
 #include <pcl/common/transforms.h>
 #include<iostream>
 #include<algorithm>
+#include<pcl/filters/voxel_grid.h>
 using namespace osmpf;
 
-osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,int particles)
+osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_res,int particles,f seed_x,f seed_y)
 {
     num_particles = particles;
     d_matrix = xt::load_npy<f>(path_to_d_mat);
+   
     origin_x = min_x;
     origin_y = min_y;
     max_x = Max_x;
     max_y = Max_y;
     pf_publisher = nh.advertise<geometry_msgs::PoseArray>("osm_pose_estimate",100);
-    odom_sub.subscribe(nh,"/odometry/filtered",100);
+    odom_sub.subscribe(nh,"/odometry/filtered",25);
     pc_sub.subscribe(nh,"/road_points",100);
     sync.reset(new Sync(sync_policy(10),odom_sub,pc_sub)) ;
-    cov_lin = (f)25;
-    cov_angular = (f)M_PI_2;
+    cov_lin = (f)0.25;
+    cov_angular = (f)(3.14/2);
+    map_resolution = map_res;
     // Xt = std::make_shared<std::vector<pose>>();
     // Wt = std::make_shared<std::vector<f>>();
     Xt = std::vector<pose>(num_particles);
     Wt = std::vector<f>(num_particles);
+    if (seed_x!=0 || seed_y !=0)
+    {
+        setSeed(seed_x,seed_y);
+    }
     init_particles();
     prev_odom.pose.pose.position.x = 0.;
     prev_odom.pose.pose.position.y = 0.;
@@ -38,7 +45,7 @@ osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,int par
     prev_odom.pose.pose.orientation.x = 0.;
     prev_odom.pose.pose.orientation.y = 0.;
     prev_odom.pose.pose.orientation.z = 0.;
-    prev_odom.pose.pose.orientation.w = 0.;
+    prev_odom.pose.pose.orientation.w = 1.;
     prev_odom.twist.twist.linear.x = 0.;
     prev_odom.twist.twist.linear.y = 0.;
     prev_odom.twist.twist.linear.z = 0.;
@@ -46,10 +53,36 @@ osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,int par
     prev_odom.twist.twist.angular.y = 0.;
     prev_odom.twist.twist.angular.z = 0.;
     ROS_INFO("Particles initialized");
+    bool seed_set;
+}
+
+void osm_pf::setSeed(f x, f y)
+{
+    init_x = x;
+    init_y = y;
+    seed_set = true;
 }
 
 void osm_pf::init_particles()
 {
+    if(seed_set)
+    {
+    std::default_random_engine gen;
+    std::uniform_real_distribution<f> dist_x(init_x-cov_lin,init_x+cov_lin);
+    std::uniform_real_distribution<f> dist_y(init_y-cov_lin,init_y+cov_lin);
+    std::uniform_real_distribution<f> dist_theta(0.,(f)2*M_PI);
+
+    for(int i=0;i<num_particles;i++)
+    {
+        f _x = dist_x(gen);
+        f _y = dist_y(gen);
+        f _theta = dist_theta(gen);
+        pose p(_x,_y,_theta);
+        Xt[i]=p;
+    } 
+    }
+    else
+    {
     // std::default_random_engine generator;
     std::random_device rd;
     std::mt19937 gen(rd());
@@ -64,13 +97,16 @@ void osm_pf::init_particles()
         f _theta = distribution_theta(gen);
         pose p(_x,_y,_theta);
         Xt[i]=p;
-    }    
+    } 
+
+    }
+   
 }
 
 pose osm_pf::find_xbar(pose x_tminus1,nav_msgs::Odometry odom)
 {
     f dx = odom.pose.pose.position.x - prev_odom.pose.pose.position.x;
-    f dy = odom.pose.pose.position.y - - prev_odom.pose.pose.position.y;
+    f dy = odom.pose.pose.position.y - prev_odom.pose.pose.position.y;
     geometry_msgs::Quaternion q_new = odom.pose.pose.orientation;   
     geometry_msgs::Quaternion q_old = this->prev_odom.pose.pose.orientation;
 
@@ -100,19 +136,25 @@ std::vector<pose> osm_pf::find_Xbar(std::vector<pose> X_tminus1,nav_msgs::Odomet
 
 osm_pf::f osm_pf::find_wt_point(pcl::PointXYZI point)
 {
-    auto e = point.x - origin_x;
-    auto n = point.y - origin_y;
+    auto e = int((point.x - origin_x)/map_resolution);
+    auto n = int((point.y - origin_y)/map_resolution);
     auto i = point.intensity;
-    f wt,distance,r_w;
-    r_w = (f)20.0;
+    f wt,distance,r_w,d2;
+    r_w = (f)800.0;
 
     if(point.x>origin_x && point.x<max_x && point.y>origin_y && point.y<max_y)
     {
-        distance = d_matrix(n,e);
+        distance = d_matrix(n,e,0);
+
     }
     else
     {
         distance = -1.0;
+    }
+    
+    if(distance<200 && i==255.0)
+    {
+        std::cout<<"\nDistance less than 200m";
     }
 
     if(distance>0.0)
@@ -164,6 +206,13 @@ pcl::PointCloud<pcl::PointXYZI> osm_pf::drop_zeros(sensor_msgs::PointCloud2 p_cl
 osm_pf::f osm_pf::find_wt(pose xbar,sensor_msgs::PointCloud2 p_cloud)
 {
     pcl::PointCloud<pcl::PointXYZI> p_cloud_ptr= drop_zeros(p_cloud);
+    // pcl::PointCloud<pcl::PointXYZI>::Ptr ptr(&p_cloud_ptr);
+    // pcl::PointCloud<pcl::PointXYZI>::Ptr p_cloud_filtered(new pcl::PointCloud<pcl::PointXYZI>) ;
+    // pcl::VoxelGrid<pcl::PointXYZI> filter;
+    // filter.setInputCloud(ptr);
+    // filter.setLeafSize(1.f,1.f,1.f);
+    // filter.filter(*p_cloud_filtered);
+
     // std::cout<<"Outcloud size in function after dropping zeros: "<<p_cloud_ptr.points.size()<<std::endl;
     Eigen::Matrix4f T;
     T<<cos(xbar.theta), -sin(xbar.theta),0, xbar.x,
@@ -176,14 +225,15 @@ osm_pf::f osm_pf::find_wt(pose xbar,sensor_msgs::PointCloud2 p_cloud)
 
     
     f weight = 1;
-    for(auto x : pcl_cloud_map_frame.points)
+    for(int i=0;i<pcl_cloud_map_frame.points.size();i++)
     {
-        f w = find_wt_point(x);
+        pcl::PointXYZI p = pcl_cloud_map_frame.points[i];
+        f w = find_wt_point(p);
         // if(w>0.)
         // {
         //     ROS_INFO("valid point");
         // }
-        weight += w;
+        weight = weight*w;
     }
 
     return weight;
@@ -200,7 +250,11 @@ std::vector<osm_pf::f> osm_pf::find_Wt(std::vector<pose> Xtbar,sensor_msgs::Poin
         weight=find_wt(p,p_cloud);
         weights.push_back(weight);
     }
-
+    std::cout<<"\nWeights: "<<std::endl;
+    for(auto x : weights)
+    {
+        std::cout<<" "<<x;
+    }
     return weights;
 }
 

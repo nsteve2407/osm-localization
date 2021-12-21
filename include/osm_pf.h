@@ -36,6 +36,7 @@ namespace osmpf
         float origin_y;
         float max_x;
         float max_y;
+        float map_resolution;
         ros::NodeHandle nh;
         ros::Publisher pf_publisher;
         message_filters::Subscriber<nav_msgs::Odometry> odom_sub;
@@ -50,9 +51,12 @@ namespace osmpf
         std::vector<f> Wt;
         f cov_lin, cov_angular;
         nav_msgs::Odometry prev_odom;
+        bool seed_set;
+        f init_x;
+        f init_y;
         public:
         // Methods
-        osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,int particles=100);
+        osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_res,int particles=100,f seed_x=0,f seed_y=0);
         void init_particles();
         pose find_xbar(pose x_tminus1,nav_msgs::Odometry odom);
         std::vector<pose> find_Xbar(std::vector<pose> X_tminus1,nav_msgs::Odometry odom);
@@ -62,6 +66,7 @@ namespace osmpf
         std::vector<pose> sample_xt(std::vector<pose> Xbar_t,std::vector<f> Wt);
         void callback(const nav_msgs::OdometryConstPtr&,const sensor_msgs::PointCloud2ConstPtr&);
         pcl::PointCloud<pcl::PointXYZI> drop_zeros(sensor_msgs::PointCloud2 p_cloud);
+        void setSeed(f x,f y);
         void run();
     };
 }
