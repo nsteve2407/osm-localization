@@ -6,7 +6,7 @@
 <node name="tf_imu_base" pkg="tf" type="static_transform_publisher" args=" 0 0 0 0 0 0 base_footprint imu_link 100" />
 <include file="$(find robot_localization)/launch/ekf_template.launch" />
 
-<include file="$(find road_seg_deeplabv3)/launch/segment.launch" />
+<include file="$(find road_seg_deeplabv3)/launch/s-layer.launch" />
 <!-- <include file="$(find osm_cartography)/launch/viz_osm.launch" > -->
     <!-- <arg name="url" value="package://osm_cartography/tests/tamu_map.osm"/> -->
 <!-- </include> -->

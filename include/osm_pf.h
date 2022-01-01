@@ -37,6 +37,7 @@ namespace osmpf
         float max_x;
         float max_y;
         float map_resolution;
+        int count;
         ros::NodeHandle nh;
         ros::Publisher pf_publisher;
         message_filters::Subscriber<nav_msgs::Odometry> odom_sub;
@@ -63,7 +64,7 @@ namespace osmpf
         f find_wt(pose xbar,sensor_msgs::PointCloud2 p_cloud);
         f find_wt_point(pcl::PointXYZI point);
         std::vector<f> find_Wt(std::vector<pose> Xtbar,sensor_msgs::PointCloud2 p_cloud);
-        std::vector<pose> sample_xt(std::vector<pose> Xbar_t,std::vector<f> Wt);
+        std::vector<pose> sample_xt(std::vector<pose> Xbar_t,std::vector<f>& Wt);
         void callback(const nav_msgs::OdometryConstPtr&,const sensor_msgs::PointCloud2ConstPtr&);
         pcl::PointCloud<pcl::PointXYZI> drop_zeros(sensor_msgs::PointCloud2 p_cloud);
         void setSeed(f x,f y);
