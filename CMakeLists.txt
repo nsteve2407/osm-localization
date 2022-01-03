@@ -42,6 +42,7 @@ include
   ${PCL_INCLUDE_DIRS}
 
 )
+add_definitions(${PCL_DEFINITIONS})
 add_library(osmpf /home/mkz/catkin_ws/src/osm-localization/src/osm_pf.cpp)
 
 include_directories(${PCL_INCLUDE_DIRS})

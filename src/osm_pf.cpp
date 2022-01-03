@@ -39,7 +39,7 @@ osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_r
     max_y = Max_y;
     pf_publisher = nh.advertise<geometry_msgs::PoseArray>("osm_pose_estimate",100);
     odom_sub.subscribe(nh,"/odometry/filtered",25);
-    pc_sub.subscribe(nh,"/cloud_filtered_Box",100);
+    pc_sub.subscribe(nh,"/road_points",100);
     // pc_sub.subscribe(nh,"/road_points",100);
     sync.reset(new Sync(sync_policy(10),odom_sub,pc_sub)) ;
     cov_lin = (f)10;
@@ -198,9 +198,9 @@ osm_pf::f osm_pf::find_wt_point(pcl::PointXYZI point)
     
 }
 
-pcl::PointCloud<pcl::PointXYZI> osm_pf::drop_zeros(sensor_msgs::PointCloud2 p_cloud)
+pcl::PointCloud<pcl::PointXYZI>::Ptr osm_pf::drop_zeros(sensor_msgs::PointCloud2 p_cloud)
 {
-    pcl::PointCloud<pcl::PointXYZI>out_cloud ;
+    pcl::PointCloud<pcl::PointXYZI>::Ptr out_cloud(new pcl::PointCloud<pcl::PointXYZI>) ;
     pcl::PointCloud<pcl::PointXYZI> pcl_cloud;
     pcl::fromROSMsg(p_cloud,pcl_cloud);
 
@@ -211,24 +211,31 @@ pcl::PointCloud<pcl::PointXYZI> osm_pf::drop_zeros(sensor_msgs::PointCloud2 p_cl
     {
         if(point.x*point.x > 0.01 && point.y*point.y> 0.01 &&  point.z*point.z> 0.01 & std::sqrt(point.x*point.x+point.y*point.y+point.z*point.z) <10)
         {
-            out_cloud.points.push_back(point);
+            out_cloud->points.push_back(point);
         }
     }
     // std::cout<<"Outcloud size after dropping zeros: "<<out_cloud.points.size()<<std::endl;
     return out_cloud;
 }
 
+pcl::PointCloud<pcl::PointXYZI>::Ptr osm_pf::downsize(pcl::PointCloud<pcl::PointXYZI>::Ptr incloud)
+{
+    pcl::PointCloud<pcl::PointXYZI>::Ptr p_cloud_filtered(new pcl::PointCloud<pcl::PointXYZI>);
+    pcl::VoxelGrid<pcl::PointXYZI> filter;
+    filter.setInputCloud(incloud);
+    filter.setLeafSize(0.2f,0.2f,0.2f);
+    filter.filter(*p_cloud_filtered);
+    std::cout<<"\nFiltered!";
+
+    return p_cloud_filtered;
+}
+
 osm_pf::f osm_pf::find_wt(pose xbar,sensor_msgs::PointCloud2 p_cloud)
 {
-    pcl::PointCloud<pcl::PointXYZI> p_cloud_ptr= drop_zeros(p_cloud);
-    // pcl::PointCloud<pcl::PointXYZI>::Ptr ptr(&p_cloud_ptr);
-    // pcl::PointCloud<pcl::PointXYZI>::Ptr p_cloud_filtered(new pcl::PointCloud<pcl::PointXYZI>) ;
-    // pcl::VoxelGrid<pcl::PointXYZI> filter;
-    // filter.setInputCloud(ptr);
-    // filter.setLeafSize(1.f,1.f,1.f);
-    // filter.filter(*p_cloud_filtered);
+    pcl::PointCloud<pcl::PointXYZI>::Ptr p_cloud_ptr= drop_zeros(p_cloud);
 
-    // std::cout<<"Outcloud size in function after dropping zeros: "<<p_cloud_ptr.points.size()<<std::endl;
+    pcl::PointCloud<pcl::PointXYZI>::Ptr p_cloud_filtered = downsize(p_cloud_ptr);
+    std::cout<<"Outcloud size in function after  downsampling: "<<p_cloud_filtered->points.size()<<std::endl;
     Eigen::Matrix4f T;
     T<<cos(xbar.theta), -sin(xbar.theta),0, xbar.x,
        sin(xbar.theta), cos(xbar.theta), 0, xbar.y,
@@ -236,7 +243,10 @@ osm_pf::f osm_pf::find_wt(pose xbar,sensor_msgs::PointCloud2 p_cloud)
        0,0,0,1;
     
     pcl::PointCloud<pcl::PointXYZI> pcl_cloud_map_frame;
-    pcl::transformPointCloud(p_cloud_ptr,pcl_cloud_map_frame,T);
+    pcl::transformPointCloud(*p_cloud_filtered,pcl_cloud_map_frame,T);
+    std::cout<<"\nCloud Transformed";
+    std::cout<<"\nOutcloud size in function after  transforming: "<<pcl_cloud_map_frame.points.size()<<std::endl;
+
 
     
     f weight = 1;
@@ -250,6 +260,7 @@ osm_pf::f osm_pf::find_wt(pose xbar,sensor_msgs::PointCloud2 p_cloud)
         // }
         weight = weight*w;
     }
+    std::cout<<"\nWeight calculated";
 
     return weight;
 
