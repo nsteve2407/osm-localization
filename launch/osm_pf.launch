@@ -2,7 +2,8 @@
 
 <launch>
 
-<node name="pose_withCov" pkg="osm-localization" type="pose_cov"/>
+<include file="$(find osm-localization)/launch/ouster_driver.launch" />
+<node name="vehicle_odometry" pkg="osm-localization" type="odometry.py"/>
 <node name="tf_imu_base" pkg="tf" type="static_transform_publisher" args=" 0 0 0 0 0 0 base_footprint imu_link 100" />
 <include file="$(find robot_localization)/launch/ekf_template.launch" />
 
@@ -13,8 +14,8 @@
 <!-- <node name="tf_map" pkg="tf" type="static_transform_publisher" args=" 0 0 0 0 0 0 map local_map 100" /> -->
 
 <!-- <node name="rviz" pkg ="rviz" type="rviz" args="-d $(find osm-localization)/osm_pf.rviz" /> -->
-
-<!-- <node name="osm_particle_filter" pkg="osm-localization" type="pf_node">
+<!-- 
+<node name="osm_particle_filter" pkg="osm-localization" type="pf_node">
     <rosparam command="load" file="$(find osm-localization)/config/config.yaml" />
 
 

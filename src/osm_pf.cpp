@@ -42,8 +42,8 @@ osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_r
     pc_sub.subscribe(nh,"/road_points",100);
     // pc_sub.subscribe(nh,"/road_points",100);
     sync.reset(new Sync(sync_policy(10),odom_sub,pc_sub)) ;
-    cov_lin = (f)10;
-    cov_angular = (f)(3.14/2);
+    cov_lin = (f)0.01;
+    cov_angular = (f)(0.025);
     map_resolution = map_res;
     // Xt = std::make_shared<std::vector<pose>>();
     // Wt = std::make_shared<std::vector<f>>();
@@ -155,7 +155,7 @@ osm_pf::f osm_pf::find_wt_point(pcl::PointXYZI point)
     auto n = int((point.y - origin_y)/map_resolution);
     auto i = point.intensity;
     f wt,distance,r_w,d2;
-    r_w = (f)800;
+    r_w = (f)8;
 
     if(point.x>origin_x && point.x<max_x && point.y>origin_y && point.y<max_y)
     {
@@ -167,9 +167,9 @@ osm_pf::f osm_pf::find_wt_point(pcl::PointXYZI point)
         distance = -1.0;
     }
     
-    // if(distance<200 && i==255.0)
+    // if(distance<15 && i==255.0)
     // {
-    //     std::cout<<"\nDistance less than 200m";
+    //     std::cout<<"\nDistance less than 15m";
     // }
 
     if(distance>0.0)
@@ -225,7 +225,7 @@ pcl::PointCloud<pcl::PointXYZI>::Ptr osm_pf::downsize(pcl::PointCloud<pcl::Point
     filter.setInputCloud(incloud);
     filter.setLeafSize(0.2f,0.2f,0.2f);
     filter.filter(*p_cloud_filtered);
-    std::cout<<"\nFiltered!";
+    // std::cout<<"\nFiltered!";
 
     return p_cloud_filtered;
 }
@@ -235,7 +235,7 @@ osm_pf::f osm_pf::find_wt(pose xbar,sensor_msgs::PointCloud2 p_cloud)
     pcl::PointCloud<pcl::PointXYZI>::Ptr p_cloud_ptr= drop_zeros(p_cloud);
 
     pcl::PointCloud<pcl::PointXYZI>::Ptr p_cloud_filtered = downsize(p_cloud_ptr);
-    std::cout<<"Outcloud size in function after  downsampling: "<<p_cloud_filtered->points.size()<<std::endl;
+    // std::cout<<"Outcloud size in function after  downsampling: "<<p_cloud_filtered->points.size()<<std::endl;
     Eigen::Matrix4f T;
     T<<cos(xbar.theta), -sin(xbar.theta),0, xbar.x,
        sin(xbar.theta), cos(xbar.theta), 0, xbar.y,
@@ -244,8 +244,8 @@ osm_pf::f osm_pf::find_wt(pose xbar,sensor_msgs::PointCloud2 p_cloud)
     
     pcl::PointCloud<pcl::PointXYZI> pcl_cloud_map_frame;
     pcl::transformPointCloud(*p_cloud_filtered,pcl_cloud_map_frame,T);
-    std::cout<<"\nCloud Transformed";
-    std::cout<<"\nOutcloud size in function after  transforming: "<<pcl_cloud_map_frame.points.size()<<std::endl;
+    // std::cout<<"\nCloud Transformed";
+    // std::cout<<"\nOutcloud size in function after  transforming: "<<pcl_cloud_map_frame.points.size()<<std::endl;
 
 
     
@@ -258,9 +258,9 @@ osm_pf::f osm_pf::find_wt(pose xbar,sensor_msgs::PointCloud2 p_cloud)
         // {
         //     ROS_INFO("valid point");
         // }
-        weight = weight*w;
+        weight = weight+w;
     }
-    std::cout<<"\nWeight calculated";
+    // std::cout<<"\nWeight calculated";
 
     return weight;
 
@@ -312,10 +312,10 @@ void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs:
     std::vector<pose> Xbar = find_Xbar(Xt,u);
     std::vector<f> Wt_est  = find_Wt(Xbar,z);
 
-    if (count == 3)
+    if (count == 5)
     {
 
-        std::vector<pose> X_t_est = sample_xt(Xbar,Wt);
+        std::vector<pose> X_t_est = sample_xt(Xbar,Wt_est);
         Xt = X_t_est;
         Wt = Wt_est;
         count = 0;
