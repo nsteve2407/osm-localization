@@ -37,7 +37,17 @@ namespace osmpf
         float max_x;
         float max_y;
         float map_resolution;
-        int count;
+        float down_sample_size;
+        float init_cov_linear;
+        float init_cov_angular;
+        float odom_cov_lin;
+        float odom_cov_angular;
+        int count,resampling_count;
+        bool use_pi_weighting, use_pi_resampling;
+        int road_width,queue_size,sync_queue_size;
+        f pi_gain;
+
+
         ros::NodeHandle nh;
         ros::Publisher pf_publisher;
         ros::Publisher pf_lat_lon;

@@ -15,3 +15,26 @@ min_x : 719356.43731
 max_x : 763470.4563
 min_y : 3379403.5684
 max_y : 3429942.0857
+seed_x : 738912.92
+seed_y : 3392799.59
+
+
+
+
+#Runtime Parameters
+map_resolution : 5
+num_particles : 500
+down_sample_size : 1.2
+init_cov_linear : 25.0
+init_cov_angular : 6.2831 
+odom_cov_lin : 1.0
+odom_cov_angular : 0.1
+resampling_count : 8
+
+use_pi_weighting : false
+use_pi_resampling : false
+
+road_width : 15
+pi_gain : 1.0
+queue_size : 50000
+sync_queue_size : 10

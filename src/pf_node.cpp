@@ -20,18 +20,23 @@ int main(int argc,char** argv)
     // // Values to access
     std::string path;
     f min_x,min_y,max_x,max_y;
+    int resolution,num_particles;
     nh.getParam("/osm_particle_filter/path_to_dmat",path);
     nh.getParam("/osm_particle_filter/min_x",min_x);
     nh.getParam("/osm_particle_filter/min_y",min_y);
     nh.getParam("/osm_particle_filter/max_x",max_x);
     nh.getParam("/osm_particle_filter/max_y",max_y);
+    nh.getParam("/osm_particle_filter/map_resolution",resolution);
+    nh.getParam("/osm_particle_filter/num_particles",num_particles);
     ROS_INFO("Parameters Loaded Successfully");
 
     ROS_INFO("Starting Particle Filter...");
     
-    f seed_x  = 738912.92;
-    f seed_y = 3392799.59;
-    std::shared_ptr<osmpf::osm_pf> pf_ptr(new osmpf::osm_pf (path,min_x,min_y,max_x,max_y,5,500,seed_x,seed_y));
+    f seed_x,seed_y;
+    nh.getParam("/osm_particle_filter/seed_x",seed_x);
+    nh.getParam("/osm_particle_filter/seed_y",seed_y);
+    
+    std::shared_ptr<osmpf::osm_pf> pf_ptr(new osmpf::osm_pf (path,min_x,min_y,max_x,max_y,resolution,num_particles,seed_x,seed_y));
 
     // // Run Particle Filter
     pf_ptr->run();

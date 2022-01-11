@@ -64,20 +64,43 @@ osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_r
     origin_y = min_y;
     max_x = Max_x;
     max_y = Max_y;
+
+    nh.getParam("/osm_particle_filter/down_sample_size",down_sample_size);
+    nh.getParam("/osm_particle_filter/init_cov_linear",init_cov_linear);
+    nh.getParam("/osm_particle_filter/init_cov_angular",init_cov_angular);
+    nh.getParam("/osm_particle_filter/odom_cov_lin",odom_cov_lin);
+    nh.getParam("/osm_particle_filter/odom_cov_angular",odom_cov_angular);
+    nh.getParam("/osm_particle_filter/resampling_count",resampling_count);
+    nh.getParam("/osm_particle_filter/use_pi_weighting",use_pi_weighting);
+    nh.getParam("/osm_particle_filter/use_pi_resampling",use_pi_resampling);
+    nh.getParam("/osm_particle_filter/road_width",road_width);
+    nh.getParam("/osm_particle_filter/pi_gain",pi_gain);
+    nh.getParam("/osm_particle_filter/queue_size",queue_size);
+    nh.getParam("/osm_particle_filter/sync_queue_size",sync_queue_size);
+
+
     pf_publisher = nh.advertise<geometry_msgs::PoseArray>("osm_pose_estimate",100);
     pf_lat_lon = nh.advertise<geometry_msgs::PoseArray>("osm_lat_lon",100);
     // pf_pose = nh.advertise<geometry_msgs::Pose>("osm_weighted_pose",100);
-    odom_sub.subscribe(nh,"/odometry/filtered",50000);
-    pc_sub.subscribe(nh,"/road_points",50000);
+    odom_sub.subscribe(nh,"/odometry/filtered",queue_size);
+    pc_sub.subscribe(nh,"/road_points",queue_size);
     // pc_sub.subscribe(nh,"/road_points",100);
-    sync.reset(new Sync(sync_policy(10),odom_sub,pc_sub)) ;
-    cov_lin = (f)2.0;
-    cov_angular = (f)(0.10);
+    sync.reset(new Sync(sync_policy(sync_queue_size),odom_sub,pc_sub)) ;
+    cov_lin = (f)init_cov_linear;
+    cov_angular = (f)init_cov_angular;
     map_resolution = map_res;
     // Xt = std::make_shared<std::vector<pose>>();
     // Wt = std::make_shared<std::vector<f>>();
     Xt = std::vector<pose>(num_particles);
-    Wt = std::vector<f>(num_particles);
+    if(use_pi_weighting)
+    {
+        Wt = std::vector<f>(num_particles,1.0);
+    }
+    else
+    {
+        Wt  = std::vector<f>(num_particles,0.0);
+    }
+    bool seed_set=false;
     if (seed_x!=0 || seed_y !=0)
     {
         setSeed(seed_x,seed_y);
@@ -97,7 +120,7 @@ osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_r
     prev_odom.twist.twist.angular.y = 0.;
     prev_odom.twist.twist.angular.z = 0.;
     ROS_INFO("Particles initialized");
-    bool seed_set;
+    
 }
 
 void osm_pf::setSeed(f x, f y)
@@ -125,7 +148,7 @@ void osm_pf::init_particles()
         Xt[i]=p;
     } 
     }
-    else
+    else // no seed so generate particles all over the map
     {
     // std::default_random_engine generator;
     std::random_device rd;
@@ -165,9 +188,9 @@ pose osm_pf::find_xbar(pose x_tminus1,nav_msgs::Odometry odom)
     // std::default_random_engine generator;
     std::random_device rd;
     std::mt19937 gen(rd());
-    std::normal_distribution<f> dist_x(e,cov_lin);
-    std::normal_distribution<f> dist_y(n,cov_lin);
-    std::normal_distribution<f> dist_theta(x_tminus1.theta+dtheta,cov_angular);
+    std::normal_distribution<f> dist_x(e,odom_cov_lin);
+    std::normal_distribution<f> dist_y(n,odom_cov_lin);
+    std::normal_distribution<f> dist_theta(x_tminus1.theta+dtheta,odom_cov_angular);
     pose p_k_bar(dist_x(gen),dist_y(gen),dist_theta(gen));
     return p_k_bar;
 }
@@ -189,7 +212,7 @@ osm_pf::f osm_pf::find_wt_point(pcl::PointXYZI point)
     auto n = int((point.y - origin_y)/map_resolution);
     auto i = point.intensity;
     f wt,distance,r_w,d2;
-    r_w = (f)20;
+    r_w = (f)road_width;
 
     if(point.x>origin_x && point.x<max_x && point.y>origin_y && point.y<max_y)
     {
@@ -211,58 +234,87 @@ osm_pf::f osm_pf::find_wt_point(pcl::PointXYZI point)
         wt = 1.0 - std::min(distance/r_w,1.0);
         if(i = 255.0)
         {
-            if (wt>0.1)
-            {   
-                // ROS_INFO("Got road point");
-                return 1000.0;
-            }
-            // if (wt>0.5)
-            // {   
-            //     // ROS_INFO("Got road point");
-            //     return 5.0;
-            // }
+            if(use_pi_weighting)
+            {
+                return wt;
+            }            
 
-            // if (wt>0.1 && wt<0.5)
-            // {   
-            //     // ROS_INFO("Got road point");
-            //     return 0.5;
-            // }
             else
             {
-                return -1.0;
+                if (wt>0.1)
+                    {   
+                        // ROS_INFO("Got road point");
+                        return 1000.0;
+                    }
+                // if (wt>0.5)
+                // {   
+                //     // ROS_INFO("Got road point");
+                //     return 5.0;
+                // }
+
+                // if (wt>0.1 && wt<0.5)
+                // {   
+                //     // ROS_INFO("Got road point");
+                //     return 0.5;
+                // }
+                else
+                {
+                    return -1.0;
+                }
             }
-           
+            
+
         }
+           
+        
         if(i != 255.0)
         {
             wt= (f)1.0 - wt;
-            if (wt>0.1)
-            {   
-                // ROS_INFO("Got road point");
-                return 1000.0;
+            if(use_pi_weighting)
+            {
+                return wt;
             }
-            // if (wt>0.5)
-            // {   
-            //     // ROS_INFO("Got road point");
-            //     return 5.0;
-            // }
 
-            // if (wt>0.1 && wt<0.5)
-            // {   
-            //     // ROS_INFO("Got road point");
-            //     return 0.5;
-            // }
+
             else
             {
-                return -1.0;
+                    if (wt>0.1)
+                {   
+                    // ROS_INFO("Got road point");
+                    return 1000.0;
+                }
+                // if (wt>0.5)
+                // {   
+                //     // ROS_INFO("Got road point");
+                //     return 5.0;
+                // }
+
+                // if (wt>0.1 && wt<0.5)
+                // {   
+                //     // ROS_INFO("Got road point");
+                //     return 0.5;
+                // }
+                else
+                {
+                    return -1.0;
+                }
             }
+
 
         }
 
     }
     else
     {
-        wt =-10.0; //Need to test this
+        // wt =-10.0; //Need to test this
+        if(use_pi_weighting)
+        {
+            return 0.1;
+        }
+        else
+        {
+            return 0.0;
+        }
     }
     
 
@@ -297,7 +349,7 @@ pcl::PointCloud<pcl::PointXYZI>::Ptr osm_pf::downsize(pcl::PointCloud<pcl::Point
     pcl::PointCloud<pcl::PointXYZI>::Ptr p_cloud_filtered(new pcl::PointCloud<pcl::PointXYZI>);
     pcl::VoxelGrid<pcl::PointXYZI> filter;
     filter.setInputCloud(incloud);
-    filter.setLeafSize(1.4f,1.4f,1.4f);
+    filter.setLeafSize(down_sample_size,down_sample_size,down_sample_size);
     filter.filter(*p_cloud_filtered);
     // std::cout<<"\nFiltered!";
 
@@ -321,18 +373,35 @@ osm_pf::f osm_pf::find_wt(pose xbar,sensor_msgs::PointCloud2 p_cloud)
     // std::cout<<"\nCloud Transformed";
     // std::cout<<"\nOutcloud size in function after  transforming: "<<pcl_cloud_map_frame.points.size()<<std::endl;
 
-
+    f weight;
+    f w;
+    if (use_pi_weighting)
+    {
+        weight = 1.0;    
+    }
+    else
+    {
+        weight = 0.0;
+    }
     
-    f weight = 0.0;
     for(int i=0;i<pcl_cloud_map_frame.points.size();i++)
     {
         pcl::PointXYZI p = pcl_cloud_map_frame.points[i];
-        f w = find_wt_point(p);
+        w = find_wt_point(p);
         // if(w>0.)
         // {
         //     ROS_INFO("valid point");
         // }
-        weight = weight+w;
+        if(use_pi_weighting)
+        {
+            weight = weight*w*pi_gain;
+        }
+        else
+        {
+            weight = weight+w;
+        }
+
+        
     }
     // std::cout<<"\nWeight calculated";
 
@@ -386,7 +455,7 @@ void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs:
     std::vector<pose> Xbar = find_Xbar(Xt,u);
     std::vector<f> Wt_est  = find_Wt(Xbar,z);
 
-    if (count == 8)
+    if (count == resampling_count)
     {
 
         std::vector<pose> X_t_est = sample_xt(Xbar,Wt_est);
@@ -430,7 +499,15 @@ void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs:
     else
     {
         Xt = Xbar;
-        Wt = Wt + Wt_est;
+        if (use_pi_resampling)
+        {
+            Wt = Wt * Wt_est;
+        }
+        else
+        {
+          Wt = Wt + Wt_est;
+        }
+
 
         geometry_msgs::PoseArray msg;
         geometry_msgs::PoseArray msg_lat_lon;
