@@ -40,6 +40,8 @@ namespace osmpf
         int count;
         ros::NodeHandle nh;
         ros::Publisher pf_publisher;
+        ros::Publisher pf_lat_lon;
+        // ros::Publisher pf_pose;
         message_filters::Subscriber<nav_msgs::Odometry> odom_sub;
         message_filters::Subscriber<sensor_msgs::PointCloud2> pc_sub;
         typedef message_filters::sync_policies::ApproximateTime<nav_msgs::Odometry,sensor_msgs::PointCloud2> sync_policy;

@@ -29,9 +29,9 @@ int main(int argc,char** argv)
 
     ROS_INFO("Starting Particle Filter...");
     
-    f seed_x  = 754669.32;
-    f seed_y = 3389674.89;
-    std::shared_ptr<osmpf::osm_pf> pf_ptr(new osmpf::osm_pf (path,min_x,min_y,max_x,max_y,3,500,seed_x,seed_y));
+    f seed_x  = 738912.92;
+    f seed_y = 3392799.59;
+    std::shared_ptr<osmpf::osm_pf> pf_ptr(new osmpf::osm_pf (path,min_x,min_y,max_x,max_y,5,500,seed_x,seed_y));
 
     // // Run Particle Filter
     pf_ptr->run();

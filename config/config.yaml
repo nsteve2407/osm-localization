@@ -1,10 +1,17 @@
-path_to_dmat  : /home/mkz/catkin_ws/src/osm-localization/distance_maps/tamu_map.npy
-min_x : 751473.523660
-max_x : 777875.8610
-min_y : 3368749.3706
-max_y : 3392029.1009
+path_to_dmat  : /home/mkz/catkin_ws/src/osm-localization/distance_maps/run1_.npy
+#msc
+# min_x : 751473.523660
+# max_x : 777875.8610
+# min_y : 3368749.3706
+# max_y : 3392029.1009
 
 # min_x : 754266.0
 # max_x : 754366.0
 # min_y : 3388880.94
 # max_y : 3389280.94
+
+# run 1
+min_x : 719356.43731
+max_x : 763470.4563
+min_y : 3379403.5684
+max_y : 3429942.0857

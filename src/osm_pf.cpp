@@ -13,20 +13,47 @@
 #include<algorithm>
 #include<pcl/filters/voxel_grid.h>
 #include <functional>
+#include"UTM.h"
 using namespace osmpf;
 
 template <typename T>
 std::vector<T> operator+(const std::vector<T>& a, const std::vector<T>& b)
 {
-    assert(a.size() == b.size());
+    // assert(a.size() == b.size());
 
+    // std::vector<T> result;
+    // result.reserve(a.size());
+
+    // std::transform(a.begin(), a.end(), b.begin(), 
+    //                std::back_inserter(result), std::plus<T>());
+    // return result;
     std::vector<T> result;
-    result.reserve(a.size());
-
-    std::transform(a.begin(), a.end(), b.begin(), 
-                   std::back_inserter(result), std::plus<T>());
+    for(int i=0;i<a.size();i++)
+    {
+        result.push_back(a[i]+b[i]);
+    }
     return result;
 }
+
+template <typename T>
+std::vector<T> operator*(const std::vector<T>& a, const std::vector<T>& b)
+{
+    // assert(a.size() == b.size());
+
+    // std::vector<T> result;
+    // result.reserve(a.size());
+
+    // std::transform(a.begin(), a.end(), b.begin(), 
+    //                std::back_inserter(result), std::plus<T>());
+    // return result;
+    std::vector<T> result;
+    for(int i=0;i<a.size();i++)
+    {
+        result.push_back(a[i]*b[i]);
+    }
+    return result;
+}
+
 
 osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_res,int particles,f seed_x,f seed_y)
 {
@@ -38,12 +65,14 @@ osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_r
     max_x = Max_x;
     max_y = Max_y;
     pf_publisher = nh.advertise<geometry_msgs::PoseArray>("osm_pose_estimate",100);
-    odom_sub.subscribe(nh,"/odometry/filtered",25);
-    pc_sub.subscribe(nh,"/road_points",100);
+    pf_lat_lon = nh.advertise<geometry_msgs::PoseArray>("osm_lat_lon",100);
+    // pf_pose = nh.advertise<geometry_msgs::Pose>("osm_weighted_pose",100);
+    odom_sub.subscribe(nh,"/odometry/filtered",50000);
+    pc_sub.subscribe(nh,"/road_points",50000);
     // pc_sub.subscribe(nh,"/road_points",100);
     sync.reset(new Sync(sync_policy(10),odom_sub,pc_sub)) ;
-    cov_lin = (f)0.01;
-    cov_angular = (f)(0.025);
+    cov_lin = (f)2.0;
+    cov_angular = (f)(0.10);
     map_resolution = map_res;
     // Xt = std::make_shared<std::vector<pose>>();
     // Wt = std::make_shared<std::vector<f>>();
@@ -83,8 +112,8 @@ void osm_pf::init_particles()
     if(seed_set)
     {
     std::default_random_engine gen;
-    std::uniform_real_distribution<f> dist_x(init_x-cov_lin,init_x+cov_lin);
-    std::uniform_real_distribution<f> dist_y(init_y-cov_lin,init_y+cov_lin);
+    std::uniform_real_distribution<f> dist_x(init_x-25,init_x+25);
+    std::uniform_real_distribution<f> dist_y(init_y-25,init_y+25);
     std::uniform_real_distribution<f> dist_theta(0.,(f)2*M_PI);
 
     for(int i=0;i<num_particles;i++)
@@ -121,18 +150,23 @@ void osm_pf::init_particles()
 pose osm_pf::find_xbar(pose x_tminus1,nav_msgs::Odometry odom)
 {
     f dx = odom.pose.pose.position.x - prev_odom.pose.pose.position.x;
-    f dy = odom.pose.pose.position.y - prev_odom.pose.pose.position.y;
+    f dy = odom.pose.pose.position.y - prev_odom.pose.pose.position.y;    
     geometry_msgs::Quaternion q_new = odom.pose.pose.orientation;   
     geometry_msgs::Quaternion q_old = this->prev_odom.pose.pose.orientation;
 
     f dtheta =  tf::getYaw(q_new) -tf::getYaw(q_old);; //check sign conversions
+    f dr = sqrt((dx*dx)+(dy*dy));
     this->prev_odom = odom;
 
+    f alpha = x_tminus1.theta + atan2(dy,dx);
+    f e = x_tminus1.x + dr*cos(alpha);
+    f n = x_tminus1.y + dr*sin(alpha);
+    // alpha = alpha +dtheta;
     // std::default_random_engine generator;
     std::random_device rd;
     std::mt19937 gen(rd());
-    std::normal_distribution<f> dist_x(x_tminus1.x+dx,cov_lin);
-    std::normal_distribution<f> dist_y(x_tminus1.y+dy,cov_lin);
+    std::normal_distribution<f> dist_x(e,cov_lin);
+    std::normal_distribution<f> dist_y(n,cov_lin);
     std::normal_distribution<f> dist_theta(x_tminus1.theta+dtheta,cov_angular);
     pose p_k_bar(dist_x(gen),dist_y(gen),dist_theta(gen));
     return p_k_bar;
@@ -155,7 +189,7 @@ osm_pf::f osm_pf::find_wt_point(pcl::PointXYZI point)
     auto n = int((point.y - origin_y)/map_resolution);
     auto i = point.intensity;
     f wt,distance,r_w,d2;
-    r_w = (f)8;
+    r_w = (f)20;
 
     if(point.x>origin_x && point.x<max_x && point.y>origin_y && point.y<max_y)
     {
@@ -177,18 +211,58 @@ osm_pf::f osm_pf::find_wt_point(pcl::PointXYZI point)
         wt = 1.0 - std::min(distance/r_w,1.0);
         if(i = 255.0)
         {
-        //    ROS_INFO("Got road point");
-           return wt;
+            if (wt>0.1)
+            {   
+                // ROS_INFO("Got road point");
+                return 1000.0;
+            }
+            // if (wt>0.5)
+            // {   
+            //     // ROS_INFO("Got road point");
+            //     return 5.0;
+            // }
+
+            // if (wt>0.1 && wt<0.5)
+            // {   
+            //     // ROS_INFO("Got road point");
+            //     return 0.5;
+            // }
+            else
+            {
+                return -1.0;
+            }
+           
         }
         if(i != 255.0)
         {
-            wt = (f)1.0 - wt;
+            wt= (f)1.0 - wt;
+            if (wt>0.1)
+            {   
+                // ROS_INFO("Got road point");
+                return 1000.0;
+            }
+            // if (wt>0.5)
+            // {   
+            //     // ROS_INFO("Got road point");
+            //     return 5.0;
+            // }
+
+            // if (wt>0.1 && wt<0.5)
+            // {   
+            //     // ROS_INFO("Got road point");
+            //     return 0.5;
+            // }
+            else
+            {
+                return -1.0;
+            }
+
         }
 
     }
     else
     {
-        wt =0.0; //Need to test this
+        wt =-10.0; //Need to test this
     }
     
 
@@ -223,7 +297,7 @@ pcl::PointCloud<pcl::PointXYZI>::Ptr osm_pf::downsize(pcl::PointCloud<pcl::Point
     pcl::PointCloud<pcl::PointXYZI>::Ptr p_cloud_filtered(new pcl::PointCloud<pcl::PointXYZI>);
     pcl::VoxelGrid<pcl::PointXYZI> filter;
     filter.setInputCloud(incloud);
-    filter.setLeafSize(0.2f,0.2f,0.2f);
+    filter.setLeafSize(1.4f,1.4f,1.4f);
     filter.filter(*p_cloud_filtered);
     // std::cout<<"\nFiltered!";
 
@@ -235,7 +309,7 @@ osm_pf::f osm_pf::find_wt(pose xbar,sensor_msgs::PointCloud2 p_cloud)
     pcl::PointCloud<pcl::PointXYZI>::Ptr p_cloud_ptr= drop_zeros(p_cloud);
 
     pcl::PointCloud<pcl::PointXYZI>::Ptr p_cloud_filtered = downsize(p_cloud_ptr);
-    // std::cout<<"Outcloud size in function after  downsampling: "<<p_cloud_filtered->points.size()<<std::endl;
+    // std::cout<<"\nOutcloud size in function after  downsampling: "<<p_cloud_filtered->points.size()<<std::endl;
     Eigen::Matrix4f T;
     T<<cos(xbar.theta), -sin(xbar.theta),0, xbar.x,
        sin(xbar.theta), cos(xbar.theta), 0, xbar.y,
@@ -249,7 +323,7 @@ osm_pf::f osm_pf::find_wt(pose xbar,sensor_msgs::PointCloud2 p_cloud)
 
 
     
-    f weight = 1;
+    f weight = 0.0;
     for(int i=0;i<pcl_cloud_map_frame.points.size();i++)
     {
         pcl::PointXYZI p = pcl_cloud_map_frame.points[i];
@@ -312,7 +386,7 @@ void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs:
     std::vector<pose> Xbar = find_Xbar(Xt,u);
     std::vector<f> Wt_est  = find_Wt(Xbar,z);
 
-    if (count == 5)
+    if (count == 8)
     {
 
         std::vector<pose> X_t_est = sample_xt(Xbar,Wt_est);
@@ -321,9 +395,11 @@ void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs:
         count = 0;
 
         geometry_msgs::PoseArray msg;
+        geometry_msgs::PoseArray msg_lat_lon;
         geometry_msgs::Quaternion q;
         geometry_msgs::Point position;
         geometry_msgs::Pose p;
+        float lat,lon;
         for(pose x: X_t_est)
         {
             q = tf::createQuaternionMsgFromYaw(x.theta);
@@ -332,11 +408,23 @@ void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs:
             position.z = 0.0;
             p.position = position;
             p.orientation = q;
-            msg.poses.push_back(p);  
+            msg.poses.push_back(p); 
+
+
+            
+            UTMXYToLatLon(x.x,x.y,14,false,lat,lon);
+            position.x = lat;
+            position.y = lon;
+            position.z = 0.0;
+            p.position = position;
+            // p.orientation = q;
+            msg_lat_lon.poses.push_back(p); 
         }
         msg.header.frame_id = "map";
+        msg_lat_lon.header.frame_id = "map";
 
         pf_publisher.publish(msg);    
+        pf_lat_lon.publish(msg_lat_lon);  
     }
 
     else
@@ -345,9 +433,11 @@ void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs:
         Wt = Wt + Wt_est;
 
         geometry_msgs::PoseArray msg;
+        geometry_msgs::PoseArray msg_lat_lon;
         geometry_msgs::Quaternion q;
         geometry_msgs::Point position;
         geometry_msgs::Pose p;
+        float lat,lon;
         for(pose x: Xt)
         {
             q = tf::createQuaternionMsgFromYaw(x.theta);
@@ -357,10 +447,22 @@ void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs:
             p.position = position;
             p.orientation = q;
             msg.poses.push_back(p);  
+
+            UTMXYToLatLon(x.x,x.y,14,false,lat,lon);
+            position.x = lat;
+            position.y = lon;
+            position.z = 0.0;
+            p.position = position;
+            // p.orientation = q;
+            msg_lat_lon.poses.push_back(p);
+
+            
         }
         msg.header.frame_id = "map";
+        msg_lat_lon.header.frame_id = "map";
 
-        pf_publisher.publish(msg);    
+        pf_publisher.publish(msg);  
+        pf_lat_lon.publish(msg_lat_lon);  
         count++;
     }
 
