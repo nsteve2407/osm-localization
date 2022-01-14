@@ -4,12 +4,19 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
-    {
-        "name": "ROS: Launch",
-        "type": "ros",
-        "request": "launch",
-        "target": "/home/mkz/catkin_ws/src/osm-localization/launch/osm_pf.launch"
-    },
+        {
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "ROS: Launch",
+            "type": "ros",
+            "request": "launch",
+            "target": "/home/mkz/catkin_ws/src/osm-localization/launch/pf_node.launch"
+        },
         {
             "name": "g++ - Build and debug active file",
             "type": "cppdbg",

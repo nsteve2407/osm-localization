@@ -22,19 +22,22 @@ seed_y : 3392799.59
 
 
 #Runtime Parameters
-map_resolution : 5
-num_particles : 500
-down_sample_size : 1.2
-init_cov_linear : 25.0
+map_resolution_x : 6.0
+map_resolution_y : 6.87
+num_particles : 1000
+down_sample_size : 2.0
+init_cov_linear : 50.0
 init_cov_angular : 6.2831 
-odom_cov_lin : 1.0
-odom_cov_angular : 0.1
+odom_cov_lin : 2.0
+odom_cov_angular : 0.3
 resampling_count : 8
 
-use_pi_weighting : false
-use_pi_resampling : false
+use_pi_weighting : true
+use_pi_resampling : true
 
-road_width : 15
+road_width : 12
 pi_gain : 1.0
 queue_size : 50000
 sync_queue_size : 10
+
+project_cloud : false

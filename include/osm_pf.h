@@ -36,14 +36,14 @@ namespace osmpf
         float origin_y;
         float max_x;
         float max_y;
-        float map_resolution;
+        float map_resolution_x,map_resolution_y;
         float down_sample_size;
         float init_cov_linear;
         float init_cov_angular;
         float odom_cov_lin;
         float odom_cov_angular;
         int count,resampling_count;
-        bool use_pi_weighting, use_pi_resampling;
+        bool use_pi_weighting, use_pi_resampling,project_cloud;
         int road_width,queue_size,sync_queue_size;
         f pi_gain;
 
@@ -51,6 +51,7 @@ namespace osmpf
         ros::NodeHandle nh;
         ros::Publisher pf_publisher;
         ros::Publisher pf_lat_lon;
+        ros::Publisher pf_cloud_pub; 
         // ros::Publisher pf_pose;
         message_filters::Subscriber<nav_msgs::Odometry> odom_sub;
         message_filters::Subscriber<sensor_msgs::PointCloud2> pc_sub;
@@ -69,7 +70,7 @@ namespace osmpf
         f init_y;
         public:
         // Methods
-        osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_res,int particles=100,f seed_x=0,f seed_y=0);
+        osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_res_x,f map_res_y,int particles=100,f seed_x=0,f seed_y=0);
         void init_particles();
         pose find_xbar(pose x_tminus1,nav_msgs::Odometry odom);
         std::vector<pose> find_Xbar(std::vector<pose> X_tminus1,nav_msgs::Odometry odom);

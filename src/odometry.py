@@ -27,7 +27,8 @@ class odom:
         self.Vx = 0.0
         self.Vy = 0.0
         self.dt= 0.0
-        self.t0 = 0.0
+        self.t0s = 0.0
+        self.t0n = 0.0
         self.t1 = 0.0
 
     def callback(self,wheel_msg,steer_msg):
@@ -36,21 +37,27 @@ class odom:
         self.Vf  =ws_f*wheel_rad
         self.Vr  = ws_r*wheel_rad
         delta  = steer_msg.steering_wheel_angle/steer_ratio
-        if abs(delta)>0.001:
+        if abs(delta)>0.02:
             Rr  = wheelbase/math.tan(delta)
-            if delta>0:
-                self.w = beta*self.w + (1-beta)*self.Vr/Rr
+            # if delta>0:
+            # self.w = beta*self.w + (1-beta)*
+            self.w = self.Vr/Rr
+            # else:
+            # self.w = beta*self.w + (1-beta)*self.Vr/Rr
+            if (Rr>0):
+                Rcg  = math.sqrt((Rr**2)+(wheelbase/2)**2)
             else:
-                self.w = self.Vr/Rr
-            Rcg  = math.sqrt((Rr**2)+(wheelbase/2)**2)
+                Rcg = math.sqrt((Rr**2)+(wheelbase/2)**2)*-1
             self.Vcg =Rcg*self.w
         else:
             self.Vcg  = (self.Vf+self.Vr)/2
             self.w =0
-
+        print('\n Angular Velocity= ',self.w)
+        print('\n Linear Velocity= ',self.Vcg)
 
         if self.count==0:
-            self.t0  = wheel_msg.header.stamp.secs
+            self.t0n  = wheel_msg.header.stamp.nsecs
+            self.t0s  = wheel_msg.header.stamp.secs
             self.count+=1
             return
 
@@ -59,18 +66,23 @@ class odom:
             self.count+=1
             return
 
-        else:
-            self.dt  = wheel_msg.header.stamp.secs - self.t0
+        if(self.count>=self.buffer_size):
+            self.dt  = (wheel_msg.header.stamp.secs-self.t0s) +((wheel_msg.header.stamp.nsecs-self.t0n)*10**-9) 
+            print('\n  Delta t = ',self.dt)
+
+
+            # self.Vx  = self.Vcg*math.cos(self.theta)
+            # self.Vy  = self.Vcg*math.sin(self.theta)
+
+            # self.x += self.Vx*self.dt
+            # self.y += self.Vy*self.dt
+            self.x += (self.Vcg*math.cos(self.theta))*self.dt
+            self.y += (self.Vcg*math.sin(self.theta))*self.dt
+
             self.theta += self.w*self.dt
-
-
-            self.Vx  = self.Vcg*math.cos(self.theta)
-            self.Vy  = self.Vcg*math.sin(self.theta)
-
-            self.x += self.Vx*self.dt
-            self.y += self.Vy*self.dt
-
-            self.count = 0
+            self.t0n = wheel_msg.header.stamp.nsecs
+            self.t0s  = wheel_msg.header.stamp.secs
+            # self.count = 0
             msg  = Odometry()
             msg.header.stamp = rospy.Time.now()
             msg.header.frame_id  = 'odom'
@@ -83,15 +95,15 @@ class odom:
             msg.pose.pose.orientation.y  = q[1]
             msg.pose.pose.orientation.z  = q[2]
             msg.pose.pose.orientation.w  = q[3]
-            msg.pose.covariance  = [1,0,0,0,0,0, 0,1,0,0,0,0, 0,0,1,0,0,0, 0,0,0,1,0,0, 0,0,0,0,1,0, 0,0,0,0,0,1]
+            msg.pose.covariance  = [1,0,0,0,0,0, 0,1,0,0,0,0, 0,0,1,0,0,0, 0,0,0,1,0,0, 0,0,0,0,1,0, 0,0,0,0,0,100]
 
             msg.twist.twist.linear.x  = self.Vx
-            msg.twist.twist.linear.y  = self.Vy
+            msg.twist.twist.linear.y  = 0.0
             msg.twist.twist.linear.z  = 0.0
             msg.twist.twist.angular.x  = 0.0
             msg.twist.twist.angular.y  = 0.0
             msg.twist.twist.angular.z  = self.w
-            msg.twist.covariance = [1,0,0,0,0,0, 0,1,0,0,0,0, 0,0,1,0,0,0, 0,0,0,1,0,0, 0,0,0,0,1,0, 0,0,0,0,0,1]
+            msg.twist.covariance = [1,0,0,0,0,0, 0,1,0,0,0,0, 0,0,1,0,0,0, 0,0,0,1,0,0, 0,0,0,0,1,0, 0,0,0,0,0,100]
 
 
             self.pub.publish(msg)

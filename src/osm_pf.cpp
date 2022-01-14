@@ -55,7 +55,7 @@ std::vector<T> operator*(const std::vector<T>& a, const std::vector<T>& b)
 }
 
 
-osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_res,int particles,f seed_x,f seed_y)
+osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_res_x,f map_res_y,int particles,f seed_x,f seed_y)
 {
     num_particles = particles;
     d_matrix = xt::load_npy<f>(path_to_d_mat);
@@ -64,7 +64,9 @@ osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_r
     origin_y = min_y;
     max_x = Max_x;
     max_y = Max_y;
-
+    map_resolution_x  =map_res_x;
+    map_resolution_y  =map_res_y;
+    
     nh.getParam("/osm_particle_filter/down_sample_size",down_sample_size);
     nh.getParam("/osm_particle_filter/init_cov_linear",init_cov_linear);
     nh.getParam("/osm_particle_filter/init_cov_angular",init_cov_angular);
@@ -77,10 +79,13 @@ osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_r
     nh.getParam("/osm_particle_filter/pi_gain",pi_gain);
     nh.getParam("/osm_particle_filter/queue_size",queue_size);
     nh.getParam("/osm_particle_filter/sync_queue_size",sync_queue_size);
+    nh.getParam("/osm_particle_filter/project_cloud",project_cloud);
 
+    
 
     pf_publisher = nh.advertise<geometry_msgs::PoseArray>("osm_pose_estimate",100);
     pf_lat_lon = nh.advertise<geometry_msgs::PoseArray>("osm_lat_lon",100);
+    pf_cloud_pub = nh.advertise<sensor_msgs::PointCloud2>("pf_cloud_map_frame",100);
     // pf_pose = nh.advertise<geometry_msgs::Pose>("osm_weighted_pose",100);
     odom_sub.subscribe(nh,"/odometry/filtered",queue_size);
     pc_sub.subscribe(nh,"/road_points",queue_size);
@@ -88,7 +93,7 @@ osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_r
     sync.reset(new Sync(sync_policy(sync_queue_size),odom_sub,pc_sub)) ;
     cov_lin = (f)init_cov_linear;
     cov_angular = (f)init_cov_angular;
-    map_resolution = map_res;
+
     // Xt = std::make_shared<std::vector<pose>>();
     // Wt = std::make_shared<std::vector<f>>();
     Xt = std::vector<pose>(num_particles);
@@ -208,8 +213,8 @@ std::vector<pose> osm_pf::find_Xbar(std::vector<pose> X_tminus1,nav_msgs::Odomet
 
 osm_pf::f osm_pf::find_wt_point(pcl::PointXYZI point)
 {
-    auto e = int((point.x - origin_x)/map_resolution);
-    auto n = int((point.y - origin_y)/map_resolution);
+    auto e = (int((std::round((point.x - origin_x)/map_resolution_x))) )-1;
+    auto n = (int(std::round((point.y - origin_y)/map_resolution_y)))-1;
     auto i = point.intensity;
     f wt,distance,r_w,d2;
     r_w = (f)road_width;
@@ -370,6 +375,13 @@ osm_pf::f osm_pf::find_wt(pose xbar,sensor_msgs::PointCloud2 p_cloud)
     
     pcl::PointCloud<pcl::PointXYZI> pcl_cloud_map_frame;
     pcl::transformPointCloud(*p_cloud_filtered,pcl_cloud_map_frame,T);
+    if(project_cloud)
+    {
+        sensor_msgs::PointCloud2 pc_cloud;
+        pcl::toROSMsg(pcl_cloud_map_frame,pc_cloud);
+        pc_cloud.header.frame_id  = "map";
+        pf_cloud_pub.publish(pc_cloud);
+    }
     // std::cout<<"\nCloud Transformed";
     // std::cout<<"\nOutcloud size in function after  transforming: "<<pcl_cloud_map_frame.points.size()<<std::endl;
 
@@ -403,7 +415,7 @@ osm_pf::f osm_pf::find_wt(pose xbar,sensor_msgs::PointCloud2 p_cloud)
 
         
     }
-    // std::cout<<"\nWeight calculated";
+    // std::cout<<"\nWeight calculated at cuurent step: "<<weight<<std::endl;
 
     return weight;
 
@@ -419,11 +431,7 @@ std::vector<osm_pf::f> osm_pf::find_Wt(std::vector<pose> Xtbar,sensor_msgs::Poin
         weight=find_wt(p,p_cloud);
         weights.push_back(weight);
     }
-    std::cout<<"\nWeights: "<<std::endl;
-    for(auto x : weights)
-    {
-        std::cout<<" "<<x;
-    }
+
     return weights;
 }
 
@@ -461,6 +469,11 @@ void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs:
         std::vector<pose> X_t_est = sample_xt(Xbar,Wt_est);
         Xt = X_t_est;
         Wt = Wt_est;
+        std::cout<<"\nWeights: "<<std::endl;
+        for(auto x : Wt)
+        {
+            std::cout<<" "<<x;
+        }
         count = 0;
 
         geometry_msgs::PoseArray msg;
@@ -506,6 +519,12 @@ void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs:
         else
         {
           Wt = Wt + Wt_est;
+        }
+
+        std::cout<<"\nWeights: "<<std::endl;
+        for(auto x : Wt)
+        {
+            std::cout<<" "<<x;
         }
 
 
