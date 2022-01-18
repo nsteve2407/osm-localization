@@ -37,7 +37,7 @@ class odom:
         self.Vf  =ws_f*wheel_rad
         self.Vr  = ws_r*wheel_rad
         delta  = steer_msg.steering_wheel_angle/steer_ratio
-        if abs(delta)>0.02:
+        if abs(delta)>0.01:
             Rr  = wheelbase/math.tan(delta)
             # if delta>0:
             # self.w = beta*self.w + (1-beta)*

@@ -87,7 +87,7 @@ osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_r
     pf_lat_lon = nh.advertise<geometry_msgs::PoseArray>("osm_lat_lon",100);
     pf_cloud_pub = nh.advertise<sensor_msgs::PointCloud2>("pf_cloud_map_frame",100);
     // pf_pose = nh.advertise<geometry_msgs::Pose>("osm_weighted_pose",100);
-    odom_sub.subscribe(nh,"/odometry/filtered",queue_size);
+    odom_sub.subscribe(nh,"/vehicle/odometry",queue_size);
     pc_sub.subscribe(nh,"/road_points",queue_size);
     // pc_sub.subscribe(nh,"/road_points",100);
     sync.reset(new Sync(sync_policy(sync_queue_size),odom_sub,pc_sub)) ;
@@ -114,10 +114,11 @@ osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_r
     prev_odom.pose.pose.position.x = 0.;
     prev_odom.pose.pose.position.y = 0.;
     prev_odom.pose.pose.position.z = 0.;
-    prev_odom.pose.pose.orientation.x = 0.;
-    prev_odom.pose.pose.orientation.y = 0.;
-    prev_odom.pose.pose.orientation.z = 0.;
-    prev_odom.pose.pose.orientation.w = 1.;
+    // prev_odom.pose.pose.orientation.x = 0.;
+    // prev_odom.pose.pose.orientation.y = 0.;
+    // prev_odom.pose.pose.orientation.z = 0.;
+    // prev_odom.pose.pose.orientation.w = 1.;
+    prev_odom.pose.pose.orientation = tf::createQuaternionMsgFromYaw(0.0);
     prev_odom.twist.twist.linear.x = 0.;
     prev_odom.twist.twist.linear.y = 0.;
     prev_odom.twist.twist.linear.z = 0.;
@@ -177,25 +178,37 @@ void osm_pf::init_particles()
 
 pose osm_pf::find_xbar(pose x_tminus1,nav_msgs::Odometry odom)
 {
-    f dx = odom.pose.pose.position.x - prev_odom.pose.pose.position.x;
-    f dy = odom.pose.pose.position.y - prev_odom.pose.pose.position.y;    
+    f delta_x_odom_frame = odom.pose.pose.position.x - prev_odom.pose.pose.position.x;
+    f delta_y_odom_frame = odom.pose.pose.position.y - prev_odom.pose.pose.position.y;    
     geometry_msgs::Quaternion q_new = odom.pose.pose.orientation;   
-    geometry_msgs::Quaternion q_old = this->prev_odom.pose.pose.orientation;
+    geometry_msgs::Quaternion q_old = prev_odom.pose.pose.orientation;
 
     f dtheta =  tf::getYaw(q_new) -tf::getYaw(q_old);; //check sign conversions
-    f dr = sqrt((dx*dx)+(dy*dy));
-    this->prev_odom = odom;
+    f delta_r = sqrt((delta_x_odom_frame*delta_x_odom_frame)+(delta_y_odom_frame*delta_y_odom_frame));
+    f alpha = atan2(delta_y_odom_frame,delta_x_odom_frame)-tf::getYaw(q_old);
+    
+    f dx = delta_r*cos(alpha);
+    f dy = delta_r*sin(alpha);
 
-    f alpha = x_tminus1.theta + atan2(dy,dx);
-    f e = x_tminus1.x + dr*cos(alpha);
-    f n = x_tminus1.y + dr*sin(alpha);
+    // f alpha = x_tminus1.theta + atan2(dy,dx);
+    // f e = x_tminus1.x + dr*cos(alpha);
+    // f n = x_tminus1.y + dr*sin(alpha);
+    f e = x_tminus1.x + (dx*cos(x_tminus1.theta))-(dy*sin(x_tminus1.theta ));
+    f n = x_tminus1.y +(dx*sin(x_tminus1.theta))+ (dy*cos(x_tminus1.theta));
+    f theta =  x_tminus1.theta+dtheta;
+    // std::cout<<"\n ***** Odometry Debug*** ";
+    // std::cout<<"\n x_tminus1.x = "<<x_tminus1.x<<" x_tminus1.y = "<<x_tminus1.x; 
+    // std::cout<<"\n dx = "<<dx<<" dy = "<<dy; 
+    // std::cout<<"\n x_t.x = "<<e<<" x_t.y = "<<n;
+    // std::cout<<"\n theta_prev: "<<tf::getYaw(q_new)<<" theta_new"<<tf::getYaw(q_old)<<" dtheta:"<<dtheta;
+    // std::cout<<"\n x_tmins1.theta = "<<x_tminus1.theta<<" dtheta:"<<dtheta<<" x_t.theta = "<<theta;  
     // alpha = alpha +dtheta;
     // std::default_random_engine generator;
     std::random_device rd;
     std::mt19937 gen(rd());
     std::normal_distribution<f> dist_x(e,odom_cov_lin);
     std::normal_distribution<f> dist_y(n,odom_cov_lin);
-    std::normal_distribution<f> dist_theta(x_tminus1.theta+dtheta,odom_cov_angular);
+    std::normal_distribution<f> dist_theta(theta,odom_cov_angular);
     pose p_k_bar(dist_x(gen),dist_y(gen),dist_theta(gen));
     return p_k_bar;
 }
@@ -207,7 +220,9 @@ std::vector<pose> osm_pf::find_Xbar(std::vector<pose> X_tminus1,nav_msgs::Odomet
     {
         Xt_bar[i] = find_xbar(X_tminus1[i],odom);
     }
+    prev_odom = odom;
     return Xt_bar;
+    
 
 }
 
@@ -246,25 +261,25 @@ osm_pf::f osm_pf::find_wt_point(pcl::PointXYZI point)
 
             else
             {
-                if (wt>0.1)
+                if (wt>0.7)
                     {   
                         // ROS_INFO("Got road point");
                         return 1000.0;
                     }
-                // if (wt>0.5)
-                // {   
-                //     // ROS_INFO("Got road point");
-                //     return 5.0;
-                // }
+                if (wt>0.5)
+                {   
+                    // ROS_INFO("Got road point");
+                    return 5.0;
+                }
 
-                // if (wt>0.1 && wt<0.5)
-                // {   
-                //     // ROS_INFO("Got road point");
-                //     return 0.5;
-                // }
+                if (wt>0.1 && wt<0.5)
+                {   
+                    // ROS_INFO("Got road point");
+                    return 0.5;
+                }
                 else
                 {
-                    return -1.0;
+                    return 0.0;
                 }
             }
             
@@ -272,7 +287,7 @@ osm_pf::f osm_pf::find_wt_point(pcl::PointXYZI point)
         }
            
         
-        if(i != 255.0)
+        else
         {
             wt= (f)1.0 - wt;
             if(use_pi_weighting)
@@ -283,25 +298,25 @@ osm_pf::f osm_pf::find_wt_point(pcl::PointXYZI point)
 
             else
             {
-                    if (wt>0.1)
+                    if (wt>0.7)
                 {   
                     // ROS_INFO("Got road point");
                     return 1000.0;
                 }
-                // if (wt>0.5)
-                // {   
-                //     // ROS_INFO("Got road point");
-                //     return 5.0;
-                // }
+                if (wt>0.5)
+                {   
+                    // ROS_INFO("Got road point");
+                    return 5.0;
+                }
 
-                // if (wt>0.1 && wt<0.5)
-                // {   
-                //     // ROS_INFO("Got road point");
-                //     return 0.5;
-                // }
+                if (wt>0.1 && wt<0.5)
+                {   
+                    // ROS_INFO("Got road point");
+                    return 0.5;
+                }
                 else
                 {
-                    return -1.0;
+                    return 0.0;
                 }
             }
 
