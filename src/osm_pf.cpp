@@ -14,6 +14,7 @@
 #include<pcl/filters/voxel_grid.h>
 #include <functional>
 #include"UTM.h"
+#include<chrono>
 using namespace osmpf;
 
 template <typename T>
@@ -97,9 +98,18 @@ osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_r
     // Xt = std::make_shared<std::vector<pose>>();
     // Wt = std::make_shared<std::vector<f>>();
     Xt = std::vector<pose>(num_particles);
-    if(use_pi_weighting)
+    if(use_pi_weighting && use_pi_resampling)
     {
         Wt = std::vector<f>(num_particles,1.0);
+    }
+    else if (use_pi_weighting && !use_pi_resampling)
+    {
+        Wt  = std::vector<f>(num_particles,0.0);
+    }
+    else if(!use_pi_weighting && use_pi_resampling)
+    
+    {
+        Wt  = std::vector<f>(num_particles,1.0);
     }
     else
     {
@@ -379,12 +389,9 @@ pcl::PointCloud<pcl::PointXYZI>::Ptr osm_pf::downsize(pcl::PointCloud<pcl::Point
     return p_cloud_filtered;
 }
 
-osm_pf::f osm_pf::find_wt(pose xbar,sensor_msgs::PointCloud2 p_cloud)
+osm_pf::f osm_pf::find_wt(pose xbar,pcl::PointCloud<pcl::PointXYZI>::Ptr p_cloud_filtered)
 {
-    pcl::PointCloud<pcl::PointXYZI>::Ptr p_cloud_ptr= drop_zeros(p_cloud);
 
-    pcl::PointCloud<pcl::PointXYZI>::Ptr p_cloud_filtered = downsize(p_cloud_ptr);
-    // std::cout<<"\nOutcloud size in function after  downsampling: "<<p_cloud_filtered->points.size()<<std::endl;
     Eigen::Matrix4f T;
     T<<cos(xbar.theta), -sin(xbar.theta),0, xbar.x,
        sin(xbar.theta), cos(xbar.theta), 0, xbar.y,
@@ -392,7 +399,9 @@ osm_pf::f osm_pf::find_wt(pose xbar,sensor_msgs::PointCloud2 p_cloud)
        0,0,0,1;
     
     pcl::PointCloud<pcl::PointXYZI> pcl_cloud_map_frame;
+
     pcl::transformPointCloud(*p_cloud_filtered,pcl_cloud_map_frame,T);
+
     if(project_cloud)
     {
         sensor_msgs::PointCloud2 pc_cloud;
@@ -433,7 +442,8 @@ osm_pf::f osm_pf::find_wt(pose xbar,sensor_msgs::PointCloud2 p_cloud)
 
         
     }
-    // std::cout<<"\nWeight calculated at cuurent step: "<<weight<<std::endl;
+
+    // std::cout<<"\nWeight calculated at curent step: "<<weight<<std::endl;
 
     return weight;
 
@@ -442,11 +452,30 @@ osm_pf::f osm_pf::find_wt(pose xbar,sensor_msgs::PointCloud2 p_cloud)
 
 std::vector<osm_pf::f> osm_pf::find_Wt(std::vector<pose> Xtbar,sensor_msgs::PointCloud2 p_cloud)
 {
+    // Preprocess PointCloud
+    auto start = std::chrono::high_resolution_clock::now();
+    pcl::PointCloud<pcl::PointXYZI>::Ptr p_cloud_ptr= drop_zeros(p_cloud);
+    auto stop = std::chrono::high_resolution_clock::now();
+
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop-start);
+    std::cout<<"\n Dropping zeros took :"<< duration.count() << " microseconds ";
+
+
+    start = std::chrono::high_resolution_clock::now();
+    pcl::PointCloud<pcl::PointXYZI>::Ptr p_cloud_filtered = downsize(p_cloud_ptr);
+    stop = std::chrono::high_resolution_clock::now();
+    duration = std::chrono::duration_cast<std::chrono::microseconds>(stop-start);
+    std::cout<<"\n Downsampling took :"<< duration.count() << " microseconds ";
+
+
+
+    std::cout<<"\nOutcloud size in function after  downsampling: "<<p_cloud_filtered->points.size()<<std::endl;
+    // 
     std::vector<f> weights;
     f weight;
     for(pose p: Xtbar)
     {
-        weight=find_wt(p,p_cloud);
+        weight=find_wt(p,p_cloud_filtered);
         weights.push_back(weight);
     }
 
