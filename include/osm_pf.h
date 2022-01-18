@@ -72,7 +72,7 @@ namespace osmpf
         // Methods
         osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_res_x,f map_res_y,int particles=100,f seed_x=0,f seed_y=0);
         void init_particles();
-        pose find_xbar(pose x_tminus1,nav_msgs::Odometry odom);
+        pose find_xbar(pose x_tminus1,f dx,f dy, f dtheta);
         std::vector<pose> find_Xbar(std::vector<pose> X_tminus1,nav_msgs::Odometry odom);
         f find_wt(pose xbar,sensor_msgs::PointCloud2 p_cloud);
         f find_wt_point(pcl::PointXYZI point);

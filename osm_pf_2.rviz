@@ -8,6 +8,7 @@ Panels:
         - /Status1
         - /MarkerArray1
         - /MarkerArray1/Namespaces1
+        - /PoseArray1
         - /Odometry1/Shape1
         - /PointCloud21
       Splitter Ratio: 0.5
@@ -30,7 +31,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: PointCloud2
+    SyncSource: ""
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -61,7 +62,12 @@ Visualization Manager:
       Marker Topic: visualization_marker_array
       Name: MarkerArray
       Namespaces:
-        {}
+        bounds_osm: true
+        buildings_osm: true
+        other_osm: true
+        railroad_osm: true
+        roads_osm: true
+        waypoints_osm: true
       Queue Size: 100
       Value: true
     - Alpha: 1
@@ -69,7 +75,7 @@ Visualization Manager:
       Axes Length: 0.30000001192092896
       Axes Radius: 0.009999999776482582
       Class: rviz/PoseArray
-      Color: 255; 25; 0
+      Color: 237; 212; 0
       Enabled: true
       Head Length: 0.07000000029802322
       Head Radius: 0.029999999329447746
@@ -193,7 +199,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 934.7109375
+      Distance: 905.1461791992188
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -201,9 +207,9 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 61.34115982055664
-        Y: 86.90095520019531
-        Z: 77.29789733886719
+        X: -24.562496185302734
+        Y: 152.45126342773438
+        Z: 81.98544311523438
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false

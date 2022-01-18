@@ -176,19 +176,8 @@ void osm_pf::init_particles()
    
 }
 
-pose osm_pf::find_xbar(pose x_tminus1,nav_msgs::Odometry odom)
+pose osm_pf::find_xbar(pose x_tminus1,f dx,f dy, f dtheta)
 {
-    f delta_x_odom_frame = odom.pose.pose.position.x - prev_odom.pose.pose.position.x;
-    f delta_y_odom_frame = odom.pose.pose.position.y - prev_odom.pose.pose.position.y;    
-    geometry_msgs::Quaternion q_new = odom.pose.pose.orientation;   
-    geometry_msgs::Quaternion q_old = prev_odom.pose.pose.orientation;
-
-    f dtheta =  tf::getYaw(q_new) -tf::getYaw(q_old);; //check sign conversions
-    f delta_r = sqrt((delta_x_odom_frame*delta_x_odom_frame)+(delta_y_odom_frame*delta_y_odom_frame));
-    f alpha = atan2(delta_y_odom_frame,delta_x_odom_frame)-tf::getYaw(q_old);
-    
-    f dx = delta_r*cos(alpha);
-    f dy = delta_r*sin(alpha);
 
     // f alpha = x_tminus1.theta + atan2(dy,dx);
     // f e = x_tminus1.x + dr*cos(alpha);
@@ -215,10 +204,24 @@ pose osm_pf::find_xbar(pose x_tminus1,nav_msgs::Odometry odom)
 
 std::vector<pose> osm_pf::find_Xbar(std::vector<pose> X_tminus1,nav_msgs::Odometry odom)
 {
+    // Find change in pose (same for all particles)
+    f delta_x_odom_frame = odom.pose.pose.position.x - prev_odom.pose.pose.position.x;
+    f delta_y_odom_frame = odom.pose.pose.position.y - prev_odom.pose.pose.position.y;    
+    geometry_msgs::Quaternion q_new = odom.pose.pose.orientation;   
+    geometry_msgs::Quaternion q_old = prev_odom.pose.pose.orientation;
+
+    f dtheta =  tf::getYaw(q_new) -tf::getYaw(q_old);; //check sign conversions
+    f delta_r = sqrt((delta_x_odom_frame*delta_x_odom_frame)+(delta_y_odom_frame*delta_y_odom_frame));
+    f alpha = atan2(delta_y_odom_frame,delta_x_odom_frame)-tf::getYaw(q_old);
+    
+    f dx = delta_r*cos(alpha);
+    f dy = delta_r*sin(alpha);
+
+
     std::vector<pose> Xt_bar(num_particles);
     for(int i=0;i<num_particles;i++)
     {
-        Xt_bar[i] = find_xbar(X_tminus1[i],odom);
+        Xt_bar[i] = find_xbar(X_tminus1[i],dx,dy,dtheta);
     }
     prev_odom = odom;
     return Xt_bar;
