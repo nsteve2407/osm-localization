@@ -55,6 +55,26 @@ std::vector<T> operator*(const std::vector<T>& a, const std::vector<T>& b)
     return result;
 }
 
+template <typename T>
+std::vector<T> multiply_sum_sq(const std::vector<T>& a, const std::vector<T>& b,_Float64& w_sum_sq)
+{
+    // assert(a.size() == b.size());
+
+    // std::vector<T> result;
+    // result.reserve(a.size());
+
+    // std::transform(a.begin(), a.end(), b.begin(), 
+    //                std::back_inserter(result), std::plus<T>());
+    // return result;
+    std::vector<T> result;
+    for(int i=0;i<a.size();i++)
+    {
+        result.push_back(a[i]*b[i]);
+        w_sum_sq+=(a[i]*b[i])*(a[i]*b[i]);
+    }
+    return result;
+}
+
 
 osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_res_x,f map_res_y,int particles,f seed_x,f seed_y)
 {
@@ -81,7 +101,7 @@ osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_r
     nh.getParam("/osm_particle_filter/queue_size",queue_size);
     nh.getParam("/osm_particle_filter/sync_queue_size",sync_queue_size);
     nh.getParam("/osm_particle_filter/project_cloud",project_cloud);
-
+    nh.getParam("/osm_particle_filter/use_dynamic_resampling",use_dynamic_resampling);
     
 
     pf_publisher = nh.advertise<geometry_msgs::PoseArray>("osm_pose_estimate",100);
@@ -98,6 +118,7 @@ osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_r
     // Xt = std::make_shared<std::vector<pose>>();
     // Wt = std::make_shared<std::vector<f>>();
     Xt = std::vector<pose>(num_particles);
+    w_sum_sq = 1/num_particles;
     if(use_pi_weighting && use_pi_resampling)
     {
         Wt = std::vector<f>(num_particles,1.0);
@@ -508,105 +529,220 @@ void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs:
     sensor_msgs::PointCloud2 z = *z_ptr;
     
     std::vector<pose> Xbar = find_Xbar(Xt,u);
+
     std::vector<f> Wt_est  = find_Wt(Xbar,z);
 
-    if (count == resampling_count)
+    if(use_dynamic_resampling)
     {
-
-        std::vector<pose> X_t_est = sample_xt(Xbar,Wt_est);
-        Xt = X_t_est;
-        Wt = Wt_est;
-        std::cout<<"\nWeights: "<<std::endl;
-        for(auto x : Wt)
+        f n_eff = 1/w_sum_sq;
+        std::cout<<"\n Number of effective particles: "<< n_eff;
+        if(n_eff <= num_particles/2)
         {
-            std::cout<<" "<<x;
-        }
-        count = 0;
+            std::cout<<"\n -------------- Sampling Weights----- "<<std::endl;
+            std::vector<pose> X_t_est = sample_xt(Xbar,Wt_est);
+            Xt = X_t_est;
+            Wt = Wt_est;
+            std::cout<<"\nWeights: "<<std::endl;
+            for(auto x : Wt)
+            {
+                std::cout<<" "<<x;
+            }
+            count = 0;
 
-        geometry_msgs::PoseArray msg;
-        geometry_msgs::PoseArray msg_lat_lon;
-        geometry_msgs::Quaternion q;
-        geometry_msgs::Point position;
-        geometry_msgs::Pose p;
-        float lat,lon;
-        for(pose x: X_t_est)
-        {
-            q = tf::createQuaternionMsgFromYaw(x.theta);
-            position.x = x.x;
-            position.y = x.y;
-            position.z = 0.0;
-            p.position = position;
-            p.orientation = q;
-            msg.poses.push_back(p); 
+            geometry_msgs::PoseArray msg;
+            geometry_msgs::PoseArray msg_lat_lon;
+            geometry_msgs::Quaternion q;
+            geometry_msgs::Point position;
+            geometry_msgs::Pose p;
+            float lat,lon;
+            for(pose x: X_t_est)
+            {
+                q = tf::createQuaternionMsgFromYaw(x.theta);
+                position.x = x.x;
+                position.y = x.y;
+                position.z = 0.0;
+                p.position = position;
+                p.orientation = q;
+                msg.poses.push_back(p); 
 
 
-            
-            UTMXYToLatLon(x.x,x.y,14,false,lat,lon);
-            position.x = lat;
-            position.y = lon;
-            position.z = 0.0;
-            p.position = position;
-            // p.orientation = q;
-            msg_lat_lon.poses.push_back(p); 
-        }
-        msg.header.frame_id = "map";
-        msg_lat_lon.header.frame_id = "map";
+                
+                UTMXYToLatLon(x.x,x.y,14,false,lat,lon);
+                position.x = lat;
+                position.y = lon;
+                position.z = 0.0;
+                p.position = position;
+                // p.orientation = q;
+                msg_lat_lon.poses.push_back(p); 
+            }
+            msg.header.frame_id = "map";
+            msg_lat_lon.header.frame_id = "map";
 
-        pf_publisher.publish(msg);    
-        pf_lat_lon.publish(msg_lat_lon);  
-    }
+            pf_publisher.publish(msg);    
+            pf_lat_lon.publish(msg_lat_lon);  
 
-    else
-    {
-        Xt = Xbar;
-        if (use_pi_resampling)
-        {
-            Wt = Wt * Wt_est;
         }
         else
         {
-          Wt = Wt + Wt_est;
-        }
-
-        std::cout<<"\nWeights: "<<std::endl;
-        for(auto x : Wt)
-        {
-            std::cout<<" "<<x;
-        }
-
-
-        geometry_msgs::PoseArray msg;
-        geometry_msgs::PoseArray msg_lat_lon;
-        geometry_msgs::Quaternion q;
-        geometry_msgs::Point position;
-        geometry_msgs::Pose p;
-        float lat,lon;
-        for(pose x: Xt)
-        {
-            q = tf::createQuaternionMsgFromYaw(x.theta);
-            position.x = x.x;
-            position.y = x.y;
-            position.z = 0.0;
-            p.position = position;
-            p.orientation = q;
-            msg.poses.push_back(p);  
-
-            UTMXYToLatLon(x.x,x.y,14,false,lat,lon);
-            position.x = lat;
-            position.y = lon;
-            position.z = 0.0;
-            p.position = position;
-            // p.orientation = q;
-            msg_lat_lon.poses.push_back(p);
+            Xt = Xbar;
+            w_sum_sq = 0.0;
 
             
-        }
-        msg.header.frame_id = "map";
-        msg_lat_lon.header.frame_id = "map";
+            Wt = multiply_sum_sq(Wt, Wt_est,w_sum_sq);
+            
+            if(w_sum_sq == 0.0)
+            {
+                std::cout<<"\n Resetting Weights due to convergence to zero "<<std::endl;
+                w_sum_sq = 1/num_particles;
+                Wt  = std::vector<f>(num_particles,1.0);
 
-        pf_publisher.publish(msg);  
-        pf_lat_lon.publish(msg_lat_lon);  
-        count++;
+            }
+
+
+            std::cout<<"\nWeights: "<<std::endl;
+            for(auto x : Wt)
+            {
+                std::cout<<" "<<x;
+            }
+
+
+            geometry_msgs::PoseArray msg;
+            geometry_msgs::PoseArray msg_lat_lon;
+            geometry_msgs::Quaternion q;
+            geometry_msgs::Point position;
+            geometry_msgs::Pose p;
+            float lat,lon;
+            for(pose x: Xt)
+            {
+                q = tf::createQuaternionMsgFromYaw(x.theta);
+                position.x = x.x;
+                position.y = x.y;
+                position.z = 0.0;
+                p.position = position;
+                p.orientation = q;
+                msg.poses.push_back(p);  
+
+                UTMXYToLatLon(x.x,x.y,14,false,lat,lon);
+                position.x = lat;
+                position.y = lon;
+                position.z = 0.0;
+                p.position = position;
+                // p.orientation = q;
+                msg_lat_lon.poses.push_back(p);
+
+                
+            }
+            msg.header.frame_id = "map";
+            msg_lat_lon.header.frame_id = "map";
+
+            pf_publisher.publish(msg);  
+            pf_lat_lon.publish(msg_lat_lon);  
+            count++;
+
+        }
+
+
+    }
+    else
+    {
+        if (count == resampling_count)
+        {
+
+            std::vector<pose> X_t_est = sample_xt(Xbar,Wt_est);
+            Xt = X_t_est;
+            Wt = Wt_est;
+            std::cout<<"\nWeights: "<<std::endl;
+            for(auto x : Wt)
+            {
+                std::cout<<" "<<x;
+            }
+            count = 0;
+
+            geometry_msgs::PoseArray msg;
+            geometry_msgs::PoseArray msg_lat_lon;
+            geometry_msgs::Quaternion q;
+            geometry_msgs::Point position;
+            geometry_msgs::Pose p;
+            float lat,lon;
+            for(pose x: X_t_est)
+            {
+                q = tf::createQuaternionMsgFromYaw(x.theta);
+                position.x = x.x;
+                position.y = x.y;
+                position.z = 0.0;
+                p.position = position;
+                p.orientation = q;
+                msg.poses.push_back(p); 
+
+
+                
+                UTMXYToLatLon(x.x,x.y,14,false,lat,lon);
+                position.x = lat;
+                position.y = lon;
+                position.z = 0.0;
+                p.position = position;
+                // p.orientation = q;
+                msg_lat_lon.poses.push_back(p); 
+            }
+            msg.header.frame_id = "map";
+            msg_lat_lon.header.frame_id = "map";
+
+            pf_publisher.publish(msg);    
+            pf_lat_lon.publish(msg_lat_lon);  
+        }
+
+        else
+        {
+            Xt = Xbar;
+            if (use_pi_resampling)
+            {
+                Wt = Wt * Wt_est;
+            }
+            else
+            {
+            Wt = Wt + Wt_est;
+            }
+
+            std::cout<<"\nWeights: "<<std::endl;
+            for(auto x : Wt)
+            {
+                std::cout<<" "<<x;
+            }
+
+
+            geometry_msgs::PoseArray msg;
+            geometry_msgs::PoseArray msg_lat_lon;
+            geometry_msgs::Quaternion q;
+            geometry_msgs::Point position;
+            geometry_msgs::Pose p;
+            float lat,lon;
+            for(pose x: Xt)
+            {
+                q = tf::createQuaternionMsgFromYaw(x.theta);
+                position.x = x.x;
+                position.y = x.y;
+                position.z = 0.0;
+                p.position = position;
+                p.orientation = q;
+                msg.poses.push_back(p);  
+
+                UTMXYToLatLon(x.x,x.y,14,false,lat,lon);
+                position.x = lat;
+                position.y = lon;
+                position.z = 0.0;
+                p.position = position;
+                // p.orientation = q;
+                msg_lat_lon.poses.push_back(p);
+
+                
+            }
+            msg.header.frame_id = "map";
+            msg_lat_lon.header.frame_id = "map";
+
+            pf_publisher.publish(msg);  
+            pf_lat_lon.publish(msg_lat_lon);  
+            count++;
+        }
     }
 
 }

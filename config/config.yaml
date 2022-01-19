@@ -50,7 +50,7 @@ odom_cov_lin : 0.000000001
 odom_cov_angular : 0.01
 resampling_count : 15
 
-use_pi_weighting : false
+use_pi_weighting : true
 use_pi_resampling : true
 
 road_width : 12.0
@@ -59,3 +59,5 @@ queue_size : 50000
 sync_queue_size : 10
 
 project_cloud : false
+
+use_dynamic_resampling : true

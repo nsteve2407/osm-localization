@@ -43,7 +43,8 @@ namespace osmpf
         float odom_cov_lin;
         float odom_cov_angular;
         int count,resampling_count;
-        bool use_pi_weighting, use_pi_resampling,project_cloud;
+        bool use_pi_weighting, use_pi_resampling,project_cloud,use_dynamic_resampling;
+        f w_sum_sq;
         int road_width,queue_size,sync_queue_size;
         f pi_gain;
 
