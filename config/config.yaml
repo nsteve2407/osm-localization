@@ -48,16 +48,16 @@ init_cov_linear : 30.0
 init_cov_angular : 1.57
 odom_cov_lin : 0.000000001
 odom_cov_angular : 0.01
-resampling_count : 15
+resampling_count : 100
 
 use_pi_weighting : true
 use_pi_resampling : true
 
-road_width : 12.0
+road_width : 20.0
 pi_gain : 1.0
 queue_size : 50000
 sync_queue_size : 10
 
 project_cloud : false
 
-use_dynamic_resampling : true
+use_dynamic_resampling : false
