@@ -137,7 +137,7 @@ osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_r
         Wt  = std::vector<f>(num_particles,0.0);
     }
     bool seed_set=false;
-    if (seed_x!=0 || seed_y !=0)
+    if (seed_x!=0.0 || seed_y !=0.0)
     {
         setSeed(seed_x,seed_y);
     }
@@ -188,6 +188,7 @@ void osm_pf::init_particles()
     else // no seed so generate particles all over the map
     {
     // std::default_random_engine generator;
+    std::cout<< "\nNo seed given. Initializing Global Localization"<<std::endl;
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution<f> distribution_x(origin_x,max_x);
@@ -262,13 +263,21 @@ std::vector<pose> osm_pf::find_Xbar(std::vector<pose> X_tminus1,nav_msgs::Odomet
 
 osm_pf::f osm_pf::find_wt_point(pcl::PointXYZI point)
 {
-    auto e = (int((std::round((point.x - origin_x)/map_resolution_x))) )-1;
-    auto n = (int(std::round((point.y - origin_y)/map_resolution_y)))-1;
-    auto i = point.intensity;
+    int e = (int((std::round((point.x - origin_x)/map_resolution_x))) )-1;
+    int n = (int(std::round((point.y - origin_y)/map_resolution_y)))-1;
+    int intensity = int(point.intensity);
     f wt,distance,r_w,d2;
     r_w = (f)road_width;
+    // std::cout<<"\n e:"<<e<<" n: "<<n<<" intensity:"<<intensity;
 
-    if(point.x>origin_x && point.x<max_x && point.y>origin_y && point.y<max_y)
+    // std::cout<<"\nShape n:"<<d_matrix.shape()[1]<<" e:"<<d_matrix.shape()[1]<<std::endl;
+
+    // if(point.x>origin_x && point.x<max_x && point.y>origin_y && point.y<max_y)
+    // {
+    //     distance = d_matrix(n,e,0);
+
+    // }
+    if(e>=0 && e< d_matrix.shape()[1] && n>=0  && n<d_matrix.shape()[0])
     {
         distance = d_matrix(n,e,0);
 
@@ -282,12 +291,13 @@ osm_pf::f osm_pf::find_wt_point(pcl::PointXYZI point)
     // {
     //     std::cout<<"\nDistance less than 15m";
     // }
-
+    // std::cout<<"\n Distance:"<<distance<<std::endl;
     if(distance>0.0)
     {
         wt = 1.0 - std::min(distance/r_w,1.0);
-        if(i = 255.0)
+        if(intensity > 127)
         {
+            // std::cout<<"\n Point is a road point, intensity="<<intensity<<std::endl;
             if(use_pi_weighting)
             {
                 return wt;
@@ -448,10 +458,7 @@ osm_pf::f osm_pf::find_wt(pose xbar,pcl::PointCloud<pcl::PointXYZI>::Ptr p_cloud
     {
         pcl::PointXYZI p = pcl_cloud_map_frame.points[i];
         w = find_wt_point(p);
-        // if(w>0.)
-        // {
-        //     ROS_INFO("valid point");
-        // }
+        // std::cout<<"\nGot weight="<<w;
         if(use_pi_weighting)
         {
             weight = weight*w*pi_gain;
@@ -531,12 +538,13 @@ void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs:
     std::vector<pose> Xbar = find_Xbar(Xt,u);
 
     std::vector<f> Wt_est  = find_Wt(Xbar,z);
+    std::cout<<"\n Initial Weights calculated \n";
 
     if(use_dynamic_resampling)
     {
         f n_eff = 1/w_sum_sq;
         std::cout<<"\n Number of effective particles: "<< n_eff;
-        if(n_eff <= num_particles/2)
+        if(n_eff <= (3*num_particles/4))
         {
             std::cout<<"\n -------------- Sampling Weights----- "<<std::endl;
             std::vector<pose> X_t_est = sample_xt(Xbar,Wt_est);
