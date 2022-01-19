@@ -20,13 +20,22 @@ path_to_dmat  : /home/mkz/catkin_ws/src/osm-localization/distance_maps/run1_filt
 # seed_y : 3392822.47
 
 # run 1 filtered
+# min_x : 737254.704791
+# max_x : 748093.029759
+# min_y : 3391022.43960
+# max_y : 3400671.03915
+# seed_x : 738918.84
+# seed_y : 3392822.47
+
+# run 1 filtered
 min_x : 737254.704791
 max_x : 748093.029759
 min_y : 3391022.43960
 max_y : 3400671.03915
-seed_x : 738918.84
-seed_y : 3392822.47
-
+seed_x : 743024.69
+seed_y : 3398103.49
+# seed_x : 0.0
+# seed_y : 0.0
 # # Runtime for tamu map
 # map_resolution_x : 0.6168967310335526
 # map_resolution_y : 0.5000373741313497
@@ -42,18 +51,18 @@ seed_y : 3392822.47
 #Runtime Parameters
 map_resolution_x : 1.6850629615057993
 map_resolution_y : 1.500093213502397
-num_particles : 8000
-down_sample_size : 2.0
-init_cov_linear : 30.0
+num_particles : 10000
+down_sample_size : 1.6
+init_cov_linear : 100.0
 init_cov_angular : 1.57
-odom_cov_lin : 0.000000001
-odom_cov_angular : 0.01
-resampling_count : 100
+odom_cov_lin : 0.0001
+odom_cov_angular : 0.05
+resampling_count : 20
 
 use_pi_weighting : true
 use_pi_resampling : true
 
-road_width : 20.0
+road_width : 10.0
 pi_gain : 1.0
 queue_size : 50000
 sync_queue_size : 10

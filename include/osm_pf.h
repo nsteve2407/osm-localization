@@ -64,7 +64,7 @@ namespace osmpf
         // std::shared_ptr<std::vector<f>> Wt;
         std::vector<pose> Xt;
         std::vector<f> Wt;
-        f cov_lin, cov_angular;
+
         nav_msgs::Odometry prev_odom;
         bool seed_set;
         f init_x;

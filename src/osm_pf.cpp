@@ -112,8 +112,7 @@ osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_r
     pc_sub.subscribe(nh,"/road_points",queue_size);
     // pc_sub.subscribe(nh,"/road_points",100);
     sync.reset(new Sync(sync_policy(sync_queue_size),odom_sub,pc_sub)) ;
-    cov_lin = (f)init_cov_linear;
-    cov_angular = (f)init_cov_angular;
+
 
     // Xt = std::make_shared<std::vector<pose>>();
     // Wt = std::make_shared<std::vector<f>>();
@@ -172,9 +171,9 @@ void osm_pf::init_particles()
     if(seed_set)
     {
     std::default_random_engine gen;
-    std::uniform_real_distribution<f> dist_x(init_x-25,init_x+25);
-    std::uniform_real_distribution<f> dist_y(init_y-25,init_y+25);
-    std::uniform_real_distribution<f> dist_theta(0.,(f)2*M_PI);
+    std::uniform_real_distribution<f> dist_x(init_x-init_cov_linear,init_x+init_cov_linear);
+    std::uniform_real_distribution<f> dist_y(init_y-init_cov_linear,init_y+init_cov_linear);
+    std::uniform_real_distribution<f> dist_theta(0.,(f)2*init_cov_angular);
 
     for(int i=0;i<num_particles;i++)
     {
@@ -323,7 +322,7 @@ osm_pf::f osm_pf::find_wt_point(pcl::PointXYZI point)
                 }
                 else
                 {
-                    return 0.0;
+                    return -1.0;
                 }
             }
             
@@ -360,7 +359,7 @@ osm_pf::f osm_pf::find_wt_point(pcl::PointXYZI point)
                 }
                 else
                 {
-                    return 0.0;
+                    return -1.0;
                 }
             }
 
@@ -486,18 +485,18 @@ std::vector<osm_pf::f> osm_pf::find_Wt(std::vector<pose> Xtbar,sensor_msgs::Poin
     auto stop = std::chrono::high_resolution_clock::now();
 
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop-start);
-    std::cout<<"\n Dropping zeros took :"<< duration.count() << " microseconds ";
+    // std::cout<<"\n Dropping zeros took :"<< duration.count() << " microseconds ";
 
 
     start = std::chrono::high_resolution_clock::now();
     pcl::PointCloud<pcl::PointXYZI>::Ptr p_cloud_filtered = downsize(p_cloud_ptr);
     stop = std::chrono::high_resolution_clock::now();
     duration = std::chrono::duration_cast<std::chrono::microseconds>(stop-start);
-    std::cout<<"\n Downsampling took :"<< duration.count() << " microseconds ";
+    // std::cout<<"\n Downsampling took :"<< duration.count() << " microseconds ";
 
 
 
-    std::cout<<"\nOutcloud size in function after  downsampling: "<<p_cloud_filtered->points.size()<<std::endl;
+    // std::cout<<"\nOutcloud size in function after  downsampling: "<<p_cloud_filtered->points.size()<<std::endl;
     // 
     std::vector<f> weights;
     f weight;
@@ -538,23 +537,23 @@ void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs:
     std::vector<pose> Xbar = find_Xbar(Xt,u);
 
     std::vector<f> Wt_est  = find_Wt(Xbar,z);
-    std::cout<<"\n Initial Weights calculated \n";
+    // std::cout<<"\n Initial Weights calculated \n";
 
     if(use_dynamic_resampling)
     {
         f n_eff = 1/w_sum_sq;
         std::cout<<"\n Number of effective particles: "<< n_eff;
-        if(n_eff <= (3*num_particles/4))
+        if(n_eff > (30000000*num_particles))
         {
             std::cout<<"\n -------------- Sampling Weights----- "<<std::endl;
             std::vector<pose> X_t_est = sample_xt(Xbar,Wt_est);
             Xt = X_t_est;
             Wt = Wt_est;
-            std::cout<<"\nWeights: "<<std::endl;
-            for(auto x : Wt)
-            {
-                std::cout<<" "<<x;
-            }
+            // std::cout<<"\nWeights: "<<std::endl;
+            // for(auto x : Wt)
+            // {
+            //     std::cout<<" "<<x;
+            // }
             count = 0;
 
             geometry_msgs::PoseArray msg;
@@ -598,20 +597,20 @@ void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs:
             
             Wt = multiply_sum_sq(Wt, Wt_est,w_sum_sq);
             
-            if(w_sum_sq == 0.0)
-            {
-                std::cout<<"\n Resetting Weights due to convergence to zero "<<std::endl;
-                w_sum_sq = 1/num_particles;
-                Wt  = std::vector<f>(num_particles,1.0);
+            // if(w_sum_sq == 0.0)
+            // {
+            //     std::cout<<"\n Resetting Weights due to convergence to zero "<<std::endl;
+            //     w_sum_sq = 1/num_particles;
+            //     Wt  = std::vector<f>(num_particles,1.0);
 
-            }
+            // }
 
 
-            std::cout<<"\nWeights: "<<std::endl;
-            for(auto x : Wt)
-            {
-                std::cout<<" "<<x;
-            }
+            // std::cout<<"\nWeights: "<<std::endl;
+            // for(auto x : Wt)
+            // {
+            //     std::cout<<" "<<x;
+            // }
 
 
             geometry_msgs::PoseArray msg;
@@ -659,11 +658,11 @@ void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs:
             std::vector<pose> X_t_est = sample_xt(Xbar,Wt_est);
             Xt = X_t_est;
             Wt = Wt_est;
-            std::cout<<"\nWeights: "<<std::endl;
-            for(auto x : Wt)
-            {
-                std::cout<<" "<<x;
-            }
+            // std::cout<<"\nWeights: "<<std::endl;
+            // for(auto x : Wt)
+            // {
+            //     std::cout<<" "<<x;
+            // }
             count = 0;
 
             geometry_msgs::PoseArray msg;
@@ -711,11 +710,11 @@ void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs:
             Wt = Wt + Wt_est;
             }
 
-            std::cout<<"\nWeights: "<<std::endl;
-            for(auto x : Wt)
-            {
-                std::cout<<" "<<x;
-            }
+            // std::cout<<"\nWeights: "<<std::endl;
+            // for(auto x : Wt)
+            // {
+            //     std::cout<<" "<<x;
+            // }
 
 
             geometry_msgs::PoseArray msg;
