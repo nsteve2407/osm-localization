@@ -102,6 +102,8 @@ osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_r
     nh.getParam("/osm_particle_filter/sync_queue_size",sync_queue_size);
     nh.getParam("/osm_particle_filter/project_cloud",project_cloud);
     nh.getParam("/osm_particle_filter/use_dynamic_resampling",use_dynamic_resampling);
+    nh.getParam("/osm_particle_filter/estimate_gps_error",estimate_gps_error);
+
     
 
     pf_publisher = nh.advertise<geometry_msgs::PoseArray>("osm_pose_estimate",100);
@@ -527,6 +529,31 @@ std::vector<pose> osm_pf::sample_xt(std::vector<pose> Xbar_t,std::vector<f>& Wt)
     Wt = Wt_gen;
 
     return Xt_gen;
+}
+
+std::shared_ptr<pose> osm_pf::weight_pose(std::vector<pose> Poses,std::vector<f> Weights)
+{
+    f avg_x,avg_y,avg_theta,weight_sum = 0.0 ;
+    std::shared_ptr<pose> avg_pose(new pose);
+
+    for(int i=0;i<Poses.size();i++)
+    {
+        avg_x += Weights[i]*Poses[i].x;
+        avg_y+= Weights[i]*Poses[i].y;
+        avg_theta+= Weights[i]*Poses[i].theta;
+        weight_sum+= Weights[i];
+    }
+
+    avg_x = avg_x/weight_sum;
+    avg_y = avg_y/weight_sum;
+    avg_theta = avg_theta/weight_sum;
+
+    avg_pose->x = avg_x;
+    avg_pose->y = avg_y;
+    avg_pose->theta = avg_theta;
+
+    return avg_pose;
+
 }
 
 void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs::PointCloud2ConstPtr& z_ptr)

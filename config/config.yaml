@@ -70,3 +70,5 @@ sync_queue_size : 10
 project_cloud : false
 
 use_dynamic_resampling : false
+
+estimate_gps_error  : true

@@ -43,7 +43,7 @@ namespace osmpf
         float odom_cov_lin;
         float odom_cov_angular;
         int count,resampling_count;
-        bool use_pi_weighting, use_pi_resampling,project_cloud,use_dynamic_resampling;
+        bool use_pi_weighting, use_pi_resampling,project_cloud,use_dynamic_resampling,estimate_gps_error;
         f w_sum_sq;
         int road_width,queue_size,sync_queue_size;
         f pi_gain;
@@ -84,5 +84,6 @@ namespace osmpf
         void setSeed(f x,f y);
         pcl::PointCloud<pcl::PointXYZI>::Ptr downsize(pcl::PointCloud<pcl::PointXYZI>::Ptr);
         void run();
+        std::shared_ptr<pose> weight_pose(std::vector<pose> Poses,std::vector<f> Weights);
     };
 }
