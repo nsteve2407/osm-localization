@@ -6,11 +6,11 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
-        - /MarkerArray1
         - /MarkerArray1/Namespaces1
         - /PoseArray1
         - /Odometry1/Shape1
         - /PointCloud21
+        - /Pose1
       Splitter Ratio: 0.5
     Tree Height: 661
   - Class: rviz/Selection
@@ -76,7 +76,7 @@ Visualization Manager:
       Axes Radius: 0.009999999776482582
       Class: rviz/PoseArray
       Color: 237; 212; 0
-      Enabled: true
+      Enabled: false
       Head Length: 0.07000000029802322
       Head Radius: 0.029999999329447746
       Name: PoseArray
@@ -86,7 +86,7 @@ Visualization Manager:
       Shape: Arrow (Flat)
       Topic: /osm_pose_estimate
       Unreliable: false
-      Value: true
+      Value: false
     - Class: agni_tf_tools/Static Transform Publisher
       Enabled: true
       Name: Static Transform Publisher
@@ -171,6 +171,22 @@ Visualization Manager:
       Use Fixed Frame: true
       Use rainbow: false
       Value: true
+    - Alpha: 1
+      Axes Length: 1
+      Axes Radius: 0.10000000149011612
+      Class: rviz/Pose
+      Color: 245; 121; 0
+      Enabled: true
+      Head Length: 15
+      Head Radius: 8
+      Name: Pose
+      Queue Size: 10
+      Shaft Length: 30
+      Shaft Radius: 5
+      Shape: Arrow
+      Topic: /osm_average_pose_estimate
+      Unreliable: false
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -199,7 +215,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 905.1461791992188
+      Distance: 1490.7279052734375
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -207,17 +223,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: -24.562496185302734
-        Y: 152.45126342773438
-        Z: 81.98544311523438
+        X: 4210.5
+        Y: 5893.28125
+        Z: 299.09344482421875
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.5147963762283325
+      Pitch: 1.5697963237762451
       Target Frame: <Fixed Frame>
-      Yaw: 4.945423603057861
+      Yaw: 5.055424213409424
     Saved: ~
 Window Geometry:
   Displays:

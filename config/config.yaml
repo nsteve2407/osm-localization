@@ -27,7 +27,7 @@ path_to_dmat  : /home/mkz/catkin_ws/src/osm-localization/distance_maps/run1_filt
 # seed_x : 738918.84
 # seed_y : 3392822.47
 
-# run 1 filtered
+# calibration_raw filtered
 min_x : 737254.704791
 max_x : 748093.029759
 min_y : 3391022.43960
@@ -51,12 +51,12 @@ seed_y : 3398103.49
 #Runtime Parameters
 map_resolution_x : 1.6850629615057993
 map_resolution_y : 1.500093213502397
-num_particles : 10000
+num_particles : 200000
 down_sample_size : 1.6
-init_cov_linear : 100.0
+init_cov_linear : 1000.0
 init_cov_angular : 1.57
-odom_cov_lin : 0.0001
-odom_cov_angular : 0.05
+odom_cov_lin : 0.005
+odom_cov_angular : 0.01
 resampling_count : 20
 
 use_pi_weighting : true

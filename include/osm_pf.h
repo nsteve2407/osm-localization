@@ -14,6 +14,7 @@
 #include <pcl/point_types.h>
 #include <pcl/filters/passthrough.h>
 #include <pcl/point_cloud.h>
+#include<std_msgs/Header.h>
 
 namespace osmpf
 {
@@ -53,6 +54,7 @@ namespace osmpf
         ros::Publisher pf_publisher;
         ros::Publisher pf_lat_lon;
         ros::Publisher pf_cloud_pub; 
+        ros::Publisher pf_avg_pub;
         // ros::Publisher pf_pose;
         message_filters::Subscriber<nav_msgs::Odometry> odom_sub;
         message_filters::Subscriber<sensor_msgs::PointCloud2> pc_sub;
@@ -85,5 +87,6 @@ namespace osmpf
         pcl::PointCloud<pcl::PointXYZI>::Ptr downsize(pcl::PointCloud<pcl::PointXYZI>::Ptr);
         void run();
         std::shared_ptr<pose> weight_pose(std::vector<pose> Poses,std::vector<f> Weights);
+        void publish_msg(std::vector<pose> X,std::vector<f> W,std_msgs::Header h);
     };
 }

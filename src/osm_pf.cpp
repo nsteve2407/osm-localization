@@ -109,6 +109,7 @@ osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_r
     pf_publisher = nh.advertise<geometry_msgs::PoseArray>("osm_pose_estimate",100);
     pf_lat_lon = nh.advertise<geometry_msgs::PoseArray>("osm_lat_lon",100);
     pf_cloud_pub = nh.advertise<sensor_msgs::PointCloud2>("pf_cloud_map_frame",100);
+    pf_avg_pub = nh.advertise<geometry_msgs::PoseStamped>("osm_average_pose_estimate",100);
     // pf_pose = nh.advertise<geometry_msgs::Pose>("osm_weighted_pose",100);
     odom_sub.subscribe(nh,"/vehicle/odometry",queue_size);
     pc_sub.subscribe(nh,"/road_points",queue_size);
@@ -533,15 +534,17 @@ std::vector<pose> osm_pf::sample_xt(std::vector<pose> Xbar_t,std::vector<f>& Wt)
 
 std::shared_ptr<pose> osm_pf::weight_pose(std::vector<pose> Poses,std::vector<f> Weights)
 {
-    f avg_x,avg_y,avg_theta,weight_sum = 0.0 ;
+    f avg_x,avg_y,avg_theta,weight_sum,wt_norm = 0.0 ;
     std::shared_ptr<pose> avg_pose(new pose);
+    f max_wt = *std::max_element(Weights.begin(),Weights.end());
 
     for(int i=0;i<Poses.size();i++)
     {
-        avg_x += Weights[i]*Poses[i].x;
-        avg_y+= Weights[i]*Poses[i].y;
-        avg_theta+= Weights[i]*Poses[i].theta;
-        weight_sum+= Weights[i];
+        wt_norm = Weights[i]/max_wt;
+        avg_x += wt_norm*Poses[i].x;
+        avg_y+= wt_norm*Poses[i].y;
+        avg_theta+= wt_norm*Poses[i].theta;
+        weight_sum+= wt_norm;
     }
 
     avg_x = avg_x/weight_sum;
@@ -553,6 +556,55 @@ std::shared_ptr<pose> osm_pf::weight_pose(std::vector<pose> Poses,std::vector<f>
     avg_pose->theta = avg_theta;
 
     return avg_pose;
+
+}
+
+void osm_pf::publish_msg(std::vector<pose> X,std::vector<f> W,std_msgs::Header h)
+{
+    geometry_msgs::PoseArray msg;
+    geometry_msgs::PoseArray msg_lat_lon;
+    geometry_msgs::Quaternion q;
+    geometry_msgs::Point position;
+    geometry_msgs::Pose p;
+    geometry_msgs::PoseStamped pose_avg;
+
+    float lat,lon;
+    for(pose x: X)
+    {
+        q = tf::createQuaternionMsgFromYaw(x.theta);
+        position.x = x.x;
+        position.y = x.y;
+        position.z = 0.0;
+        p.position = position;
+        p.orientation = q;
+        msg.poses.push_back(p); 
+
+
+        
+        UTMXYToLatLon(x.x,x.y,14,false,lat,lon);
+        position.x = lat;
+        position.y = lon;
+        position.z = 0.0;
+        p.position = position;
+        // p.orientation = q;
+        msg_lat_lon.poses.push_back(p); 
+    }
+    
+    std::shared_ptr<pose> avg_pose = weight_pose(X,W);
+    pose_avg.pose.orientation = tf::createQuaternionMsgFromYaw(avg_pose->theta);
+    pose_avg.pose.position.x = avg_pose->x;
+    pose_avg.pose.position.y = avg_pose->y;
+    pose_avg.header.stamp = h.stamp;
+    pose_avg.header.frame_id = "map";
+
+    pf_avg_pub.publish(pose_avg);
+
+
+    msg.header.frame_id = "map";
+    msg_lat_lon.header.frame_id = "map";
+
+    pf_publisher.publish(msg);    
+    pf_lat_lon.publish(msg_lat_lon);  
 
 }
 
@@ -583,37 +635,7 @@ void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs:
             // }
             count = 0;
 
-            geometry_msgs::PoseArray msg;
-            geometry_msgs::PoseArray msg_lat_lon;
-            geometry_msgs::Quaternion q;
-            geometry_msgs::Point position;
-            geometry_msgs::Pose p;
-            float lat,lon;
-            for(pose x: X_t_est)
-            {
-                q = tf::createQuaternionMsgFromYaw(x.theta);
-                position.x = x.x;
-                position.y = x.y;
-                position.z = 0.0;
-                p.position = position;
-                p.orientation = q;
-                msg.poses.push_back(p); 
-
-
-                
-                UTMXYToLatLon(x.x,x.y,14,false,lat,lon);
-                position.x = lat;
-                position.y = lon;
-                position.z = 0.0;
-                p.position = position;
-                // p.orientation = q;
-                msg_lat_lon.poses.push_back(p); 
-            }
-            msg.header.frame_id = "map";
-            msg_lat_lon.header.frame_id = "map";
-
-            pf_publisher.publish(msg);    
-            pf_lat_lon.publish(msg_lat_lon);  
+            publish_msg(X_t_est,Wt_est,u.header);
 
         }
         else
@@ -640,37 +662,7 @@ void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs:
             // }
 
 
-            geometry_msgs::PoseArray msg;
-            geometry_msgs::PoseArray msg_lat_lon;
-            geometry_msgs::Quaternion q;
-            geometry_msgs::Point position;
-            geometry_msgs::Pose p;
-            float lat,lon;
-            for(pose x: Xt)
-            {
-                q = tf::createQuaternionMsgFromYaw(x.theta);
-                position.x = x.x;
-                position.y = x.y;
-                position.z = 0.0;
-                p.position = position;
-                p.orientation = q;
-                msg.poses.push_back(p);  
-
-                UTMXYToLatLon(x.x,x.y,14,false,lat,lon);
-                position.x = lat;
-                position.y = lon;
-                position.z = 0.0;
-                p.position = position;
-                // p.orientation = q;
-                msg_lat_lon.poses.push_back(p);
-
-                
-            }
-            msg.header.frame_id = "map";
-            msg_lat_lon.header.frame_id = "map";
-
-            pf_publisher.publish(msg);  
-            pf_lat_lon.publish(msg_lat_lon);  
+            publish_msg(Xt,Wt,u.header);
             count++;
 
         }
@@ -692,37 +684,7 @@ void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs:
             // }
             count = 0;
 
-            geometry_msgs::PoseArray msg;
-            geometry_msgs::PoseArray msg_lat_lon;
-            geometry_msgs::Quaternion q;
-            geometry_msgs::Point position;
-            geometry_msgs::Pose p;
-            float lat,lon;
-            for(pose x: X_t_est)
-            {
-                q = tf::createQuaternionMsgFromYaw(x.theta);
-                position.x = x.x;
-                position.y = x.y;
-                position.z = 0.0;
-                p.position = position;
-                p.orientation = q;
-                msg.poses.push_back(p); 
-
-
-                
-                UTMXYToLatLon(x.x,x.y,14,false,lat,lon);
-                position.x = lat;
-                position.y = lon;
-                position.z = 0.0;
-                p.position = position;
-                // p.orientation = q;
-                msg_lat_lon.poses.push_back(p); 
-            }
-            msg.header.frame_id = "map";
-            msg_lat_lon.header.frame_id = "map";
-
-            pf_publisher.publish(msg);    
-            pf_lat_lon.publish(msg_lat_lon);  
+            publish_msg(Xt,Wt,u.header);
         }
 
         else
@@ -742,39 +704,7 @@ void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs:
             // {
             //     std::cout<<" "<<x;
             // }
-
-
-            geometry_msgs::PoseArray msg;
-            geometry_msgs::PoseArray msg_lat_lon;
-            geometry_msgs::Quaternion q;
-            geometry_msgs::Point position;
-            geometry_msgs::Pose p;
-            float lat,lon;
-            for(pose x: Xt)
-            {
-                q = tf::createQuaternionMsgFromYaw(x.theta);
-                position.x = x.x;
-                position.y = x.y;
-                position.z = 0.0;
-                p.position = position;
-                p.orientation = q;
-                msg.poses.push_back(p);  
-
-                UTMXYToLatLon(x.x,x.y,14,false,lat,lon);
-                position.x = lat;
-                position.y = lon;
-                position.z = 0.0;
-                p.position = position;
-                // p.orientation = q;
-                msg_lat_lon.poses.push_back(p);
-
-                
-            }
-            msg.header.frame_id = "map";
-            msg_lat_lon.header.frame_id = "map";
-
-            pf_publisher.publish(msg);  
-            pf_lat_lon.publish(msg_lat_lon);  
+            publish_msg(Xt,Wt,u.header);
             count++;
         }
     }
