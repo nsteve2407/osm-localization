@@ -56,7 +56,7 @@ std::vector<T> operator*(const std::vector<T>& a, const std::vector<T>& b)
 }
 
 template <typename T>
-std::vector<T> multiply_sum_sq(const std::vector<T>& a, const std::vector<T>& b,_Float64& w_sum_sq)
+std::vector<T> multiply_sum_sq(const std::vector<T>& a, const std::vector<T>& b,osm_pf::f& w_sum_sq)
 {
     // assert(a.size() == b.size());
 
@@ -70,7 +70,28 @@ std::vector<T> multiply_sum_sq(const std::vector<T>& a, const std::vector<T>& b,
     for(int i=0;i<a.size();i++)
     {
         result.push_back(a[i]*b[i]);
-        w_sum_sq+=(a[i]*b[i])*(a[i]*b[i]);
+        // w_sum_sq+=(a[i]*b[i])*(a[i]*b[i]);
+        w_sum_sq+=(b[i]*b[i]);
+    }
+    return result;
+}
+
+template <typename T>
+std::vector<T> sum_sum_sq(const std::vector<T>& a, const std::vector<T>& b,osm_pf::f& w_sum_sq)
+{
+    // assert(a.size() == b.size());
+
+    // std::vector<T> result;
+    // result.reserve(a.size());
+
+    // std::transform(a.begin(), a.end(), b.begin(), 
+    //                std::back_inserter(result), std::plus<T>());
+    // return result;
+    std::vector<T> result;
+    for(int i=0;i<a.size();i++)
+    {
+        result.push_back(a[i]+b[i]);
+        w_sum_sq+=(a[i]+b[i])*(a[i]+b[i]);
     }
     return result;
 }
@@ -103,6 +124,7 @@ osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_r
     nh.getParam("/osm_particle_filter/project_cloud",project_cloud);
     nh.getParam("/osm_particle_filter/use_dynamic_resampling",use_dynamic_resampling);
     nh.getParam("/osm_particle_filter/estimate_gps_error",estimate_gps_error);
+    nh.getParam("/osm_particle_filter/weight_function",weight_function);
 
     
 
@@ -120,7 +142,7 @@ osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_r
     // Xt = std::make_shared<std::vector<pose>>();
     // Wt = std::make_shared<std::vector<f>>();
     Xt = std::vector<pose>(num_particles);
-    w_sum_sq = 1/num_particles;
+    w_sum_sq = 1/(2*static_cast<f>(num_particles));
     if(use_pi_weighting && use_pi_resampling)
     {
         Wt = std::vector<f>(num_particles,1.0);
@@ -158,7 +180,9 @@ osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_r
     prev_odom.twist.twist.angular.x = 0.;
     prev_odom.twist.twist.angular.y = 0.;
     prev_odom.twist.twist.angular.z = 0.;
-    ROS_INFO("Particles initialized");
+    std::cout<<"\n Weight sum sq initialized to: "<< w_sum_sq;
+    std::cout<<"\n Neff initialized to: "<< 1/w_sum_sq;
+    ROS_INFO("\nParticles initialized");
     
 }
 
@@ -263,6 +287,31 @@ std::vector<pose> osm_pf::find_Xbar(std::vector<pose> X_tminus1,nav_msgs::Odomet
 
 }
 
+osm_pf::f osm_pf::weightfunction(f distance,f road_width)
+{
+    if(weight_function=="gaussian")
+    {
+
+        return (1/(road_width*sqrt(2*pi)))*exp(-1*((std::pow(distance,2))/(2*std::pow(road_width,2))));
+
+    }
+    if(weight_function=="exponential")
+    {
+        return 1.0 - std::min(distance/road_width,1.0);;
+    }
+    if(weight_function=="quadratic")
+    {
+        return 1.0/(std::pow(std::min(distance/road_width,1.0),2)+1);
+    }
+    if(weight_function=="")
+    {
+        ROS_ERROR(" No value for weighting function provided. Values must be one of: gaussian,exponential or quadratic");
+        // throw ros::InvalidParameterException p();
+
+    }
+    
+}
+
 osm_pf::f osm_pf::find_wt_point(pcl::PointXYZI point)
 {
     int e = (int((std::round((point.x - origin_x)/map_resolution_x))) )-1;
@@ -296,7 +345,7 @@ osm_pf::f osm_pf::find_wt_point(pcl::PointXYZI point)
     // std::cout<<"\n Distance:"<<distance<<std::endl;
     if(distance>0.0)
     {
-        wt = 1.0 - std::min(distance/r_w,1.0);
+        wt = weightfunction(distance,r_w);
         if(intensity > 127)
         {
             // std::cout<<"\n Point is a road point, intensity="<<intensity<<std::endl;
@@ -527,7 +576,8 @@ std::vector<pose> osm_pf::sample_xt(std::vector<pose> Xbar_t,std::vector<f>& Wt)
         Xt_gen.push_back(Xbar_t[idx]);
         Wt_gen.push_back(Wt[idx]);
     }
-    Wt = Wt_gen;
+    // Wt = Wt_gen;
+    Wt = std::vector<f>(num_particles,1.0);
 
     return Xt_gen;
 }
@@ -568,32 +618,45 @@ void osm_pf::publish_msg(std::vector<pose> X,std::vector<f> W,std_msgs::Header h
     geometry_msgs::Pose p;
     geometry_msgs::PoseStamped pose_avg;
 
+    f avg_x,avg_y,avg_theta,weight_sum,wt_norm = 0.0 ;
+    f max_wt = *std::max_element(W.begin(),W.end());
+
     float lat,lon;
-    for(pose x: X)
+    for(int i=0;i<X.size();i++)
     {
-        q = tf::createQuaternionMsgFromYaw(x.theta);
-        position.x = x.x;
-        position.y = x.y;
+        q = tf::createQuaternionMsgFromYaw(X[i].theta);
+        position.x = X[i].x;
+        position.y = X[i].y;
         position.z = 0.0;
         p.position = position;
         p.orientation = q;
         msg.poses.push_back(p); 
 
+        wt_norm = W[i]/max_wt;
+        avg_x += wt_norm*X[i].x;
+        avg_y+= wt_norm*X[i].y;
+        avg_theta+= wt_norm*X[i].theta;
+        weight_sum+= wt_norm;
+
 
         
-        UTMXYToLatLon(x.x,x.y,14,false,lat,lon);
-        position.x = lat;
-        position.y = lon;
-        position.z = 0.0;
-        p.position = position;
+        // UTMXYToLatLon(X[i].x,X[i].y,14,false,lat,lon);
+        // position.x = lat;
+        // position.y = lon;
+        // position.z = 0.0;
+        // p.position = position;
         // p.orientation = q;
-        msg_lat_lon.poses.push_back(p); 
+        // msg_lat_lon.poses.push_back(p); 
     }
+    avg_x = avg_x/weight_sum;
+    avg_y = avg_y/weight_sum;
+    avg_theta = avg_theta/weight_sum;
+
     
-    std::shared_ptr<pose> avg_pose = weight_pose(X,W);
-    pose_avg.pose.orientation = tf::createQuaternionMsgFromYaw(avg_pose->theta);
-    pose_avg.pose.position.x = avg_pose->x;
-    pose_avg.pose.position.y = avg_pose->y;
+    // std::shared_ptr<pose> avg_pose = weight_pose(X,W);
+    pose_avg.pose.orientation = tf::createQuaternionMsgFromYaw(avg_theta);
+    pose_avg.pose.position.x = avg_x;
+    pose_avg.pose.position.y = avg_y;
     pose_avg.header.stamp = h.stamp;
     pose_avg.header.frame_id = "map";
 
@@ -601,10 +664,10 @@ void osm_pf::publish_msg(std::vector<pose> X,std::vector<f> W,std_msgs::Header h
 
 
     msg.header.frame_id = "map";
-    msg_lat_lon.header.frame_id = "map";
+    // msg_lat_lon.header.frame_id = "map";
 
     pf_publisher.publish(msg);    
-    pf_lat_lon.publish(msg_lat_lon);  
+    // pf_lat_lon.publish(msg_lat_lon);  
 
 }
 
@@ -620,9 +683,10 @@ void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs:
 
     if(use_dynamic_resampling)
     {
-        f n_eff = 1/w_sum_sq;
+        f n_eff = (1/w_sum_sq);
+        std::cout<<"\n Weight sum sq: "<< w_sum_sq;
         std::cout<<"\n Number of effective particles: "<< n_eff;
-        if(n_eff > (30000000*num_particles))
+        if(n_eff < ((3*static_cast<f>(num_particles))/4) || count>20)
         {
             std::cout<<"\n -------------- Sampling Weights----- "<<std::endl;
             std::vector<pose> X_t_est = sample_xt(Xbar,Wt_est);
@@ -636,15 +700,21 @@ void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs:
             count = 0;
 
             publish_msg(X_t_est,Wt_est,u.header);
+            w_sum_sq = 1/(3*static_cast<f>(num_particles));
+            std::cout<<"\n Weight sum sq: "<< w_sum_sq;
 
         }
         else
         {
+            std::cout<<"\n -------------- Not Sampling Weights----- "<<std::endl;
             Xt = Xbar;
             w_sum_sq = 0.0;
 
             
             Wt = multiply_sum_sq(Wt, Wt_est,w_sum_sq);
+            std::cout<<"\n Weight sum sq: "<< w_sum_sq;
+            count += 0;
+
             
             // if(w_sum_sq == 0.0)
             // {
