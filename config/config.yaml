@@ -64,7 +64,7 @@ use_pi_resampling : true
 
 road_width : 10.0
 pi_gain : 1.0
-queue_size : 50000
+queue_size : 100
 sync_queue_size : 10
 
 project_cloud : false

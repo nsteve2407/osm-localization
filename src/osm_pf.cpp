@@ -619,7 +619,9 @@ void osm_pf::publish_msg(std::vector<pose> X,std::vector<f> W,std_msgs::Header h
     geometry_msgs::PoseStamped pose_avg;
 
     f avg_x,avg_y,avg_theta,weight_sum,wt_norm = 0.0 ;
-    f max_wt = *std::max_element(W.begin(),W.end());
+    std::vector<f>::iterator max_wt_it = std::max_element(W.begin(),W.end());
+    f max_wt = *max_wt_it+0.00000001;
+    int max_idx = std::distance(W.begin(),max_wt_it);
 
     float lat,lon;
     for(int i=0;i<X.size();i++)
@@ -632,7 +634,7 @@ void osm_pf::publish_msg(std::vector<pose> X,std::vector<f> W,std_msgs::Header h
         p.orientation = q;
         msg.poses.push_back(p); 
 
-        wt_norm = W[i]/max_wt;
+        wt_norm = (W[i]+0.00000001)/max_wt;
         avg_x += wt_norm*X[i].x;
         avg_y+= wt_norm*X[i].y;
         avg_theta+= wt_norm*X[i].theta;
@@ -652,15 +654,31 @@ void osm_pf::publish_msg(std::vector<pose> X,std::vector<f> W,std_msgs::Header h
     avg_y = avg_y/weight_sum;
     avg_theta = avg_theta/weight_sum;
 
-    
-    // std::shared_ptr<pose> avg_pose = weight_pose(X,W);
-    pose_avg.pose.orientation = tf::createQuaternionMsgFromYaw(avg_theta);
-    pose_avg.pose.position.x = avg_x;
-    pose_avg.pose.position.y = avg_y;
-    pose_avg.header.stamp = h.stamp;
-    pose_avg.header.frame_id = "map";
+    if(isnan(avg_x) || isnan(avg_y) || isnan(avg_theta))
+    {
+        // pose_avg.pose.orientation = tf::createQuaternionMsgFromYaw(X[max_idx].theta);
+        // pose_avg.pose.position.x = X[max_idx].x;
+        // pose_avg.pose.position.y = X[max_idx].y;
+        // pose_avg.header.stamp = h.stamp;
+        // pose_avg.header.frame_id = "map";
 
-    pf_avg_pub.publish(pose_avg);
+        // pf_avg_pub.publish(pose_avg);
+
+    }
+
+    else
+    {
+        pose_avg.pose.orientation = tf::createQuaternionMsgFromYaw(avg_theta);
+        pose_avg.pose.position.x = avg_x;
+        pose_avg.pose.position.y = avg_y;
+        pose_avg.header.stamp = h.stamp;
+        pose_avg.header.frame_id = "map";
+
+        pf_avg_pub.publish(pose_avg);
+
+    }
+    // std::shared_ptr<pose> avg_pose = weight_pose(X,W);
+
 
 
     msg.header.frame_id = "map";
