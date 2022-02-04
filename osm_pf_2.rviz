@@ -6,11 +6,12 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
+        - /MarkerArray1
         - /MarkerArray1/Namespaces1
-        - /PoseArray1
         - /Odometry1/Shape1
+        - /PointStamped1
+        - /PoseArray1
         - /PointCloud21
-        - /Pose1
       Splitter Ratio: 0.5
     Tree Height: 661
   - Class: rviz/Selection
@@ -70,23 +71,6 @@ Visualization Manager:
         waypoints_osm: true
       Queue Size: 100
       Value: true
-    - Alpha: 1
-      Arrow Length: 25
-      Axes Length: 0.30000001192092896
-      Axes Radius: 0.009999999776482582
-      Class: rviz/PoseArray
-      Color: 237; 212; 0
-      Enabled: false
-      Head Length: 0.07000000029802322
-      Head Radius: 0.029999999329447746
-      Name: PoseArray
-      Queue Size: 1
-      Shaft Length: 0.23000000417232513
-      Shaft Radius: 0.009999999776482582
-      Shape: Arrow (Flat)
-      Topic: /osm_pose_estimate
-      Unreliable: false
-      Value: false
     - Class: agni_tf_tools/Static Transform Publisher
       Enabled: true
       Name: Static Transform Publisher
@@ -144,6 +128,50 @@ Visualization Manager:
       Unreliable: false
       Value: false
     - Alpha: 1
+      Axes Length: 1
+      Axes Radius: 0.10000000149011612
+      Class: rviz/Pose
+      Color: 0; 0; 0
+      Enabled: true
+      Head Length: 15
+      Head Radius: 8
+      Name: Pose
+      Queue Size: 10
+      Shaft Length: 30
+      Shaft Radius: 5
+      Shape: Arrow
+      Topic: /osm_average_pose_estimate
+      Unreliable: false
+      Value: true
+    - Alpha: 1
+      Class: rviz/PointStamped
+      Color: 0; 255; 0
+      Enabled: true
+      History Length: 1
+      Name: PointStamped
+      Queue Size: 10
+      Radius: 10
+      Topic: /gps_utm
+      Unreliable: false
+      Value: true
+    - Alpha: 0.10000000149011612
+      Arrow Length: 5
+      Axes Length: 0.30000001192092896
+      Axes Radius: 0.009999999776482582
+      Class: rviz/PoseArray
+      Color: 237; 212; 0
+      Enabled: true
+      Head Length: 0.07000000029802322
+      Head Radius: 0.029999999329447746
+      Name: PoseArray
+      Queue Size: 1
+      Shaft Length: 0.23000000417232513
+      Shaft Radius: 0.009999999776482582
+      Shape: Arrow (Flat)
+      Topic: /osm_pose_estimate
+      Unreliable: false
+      Value: true
+    - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
         Max Value: 10
@@ -171,25 +199,9 @@ Visualization Manager:
       Use Fixed Frame: true
       Use rainbow: false
       Value: true
-    - Alpha: 1
-      Axes Length: 1
-      Axes Radius: 0.10000000149011612
-      Class: rviz/Pose
-      Color: 245; 121; 0
-      Enabled: true
-      Head Length: 15
-      Head Radius: 8
-      Name: Pose
-      Queue Size: 10
-      Shaft Length: 30
-      Shaft Radius: 5
-      Shape: Arrow
-      Topic: /osm_average_pose_estimate
-      Unreliable: false
-      Value: true
   Enabled: true
   Global Options:
-    Background Color: 48; 48; 48
+    Background Color: 238; 238; 236
     Default Light: true
     Fixed Frame: local_map
     Frame Rate: 30
@@ -215,7 +227,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 1490.7279052734375
+      Distance: 1977.0521240234375
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -223,9 +235,9 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 4210.5
-        Y: 5893.28125
-        Z: 299.09344482421875
+        X: 4261.447265625
+        Y: 6033.8056640625
+        Z: 299.1947021484375
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
@@ -233,7 +245,7 @@ Visualization Manager:
       Near Clip Distance: 0.009999999776482582
       Pitch: 1.5697963237762451
       Target Frame: <Fixed Frame>
-      Yaw: 5.055424213409424
+      Yaw: 5.220425128936768
     Saved: ~
 Window Geometry:
   Displays:

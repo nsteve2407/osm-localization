@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 import rospy as rp
 import geodesy.utm as utm
-from geometry_msgs.msg import PoseStamped,Vector3Stamped
+from geometry_msgs.msg import PoseStamped,Vector3Stamped,PointStamped
 from sensor_msgs.msg import NavSatFix
 import pandas as pd
 import tf_conversions as tf
@@ -17,6 +17,8 @@ class error_log:
         self.pf_e = []
         self.pf_theta = []
         self.count=0
+        self.log =False
+        self.gps_pub = rp.Publisher("gps_utm",PointStamped,queue_size=100)
         
 
 
@@ -43,6 +45,13 @@ class error_log:
         self.pf_theta.append(tf.transformations.euler_from_quaternion(q)[2])
         self.count+=1
 
+        point = PointStamped()
+        point.point.x = utm_p.easting
+        point.point.y = utm_p.northing
+        point.header  = gps_msg.header
+        point.header.frame_id = pf_msg.header.frame_id
+        self.gps_pub.publish(point)
+
 
     def __del__(self):
         print("Logged {} messages".format(self.count))
@@ -57,9 +66,9 @@ class error_log:
         self.df['error'] = np.sqrt(self.df['diff_sum'])
         
 
- 
-        self.df.to_csv('./high_freq_global_callogs_with_error.csv')
-        print('\nLog file saved !\nExiting..')
+        if self.log:
+            self.df.to_csv('./high_freq_global_callogs_with_error.csv')
+            print('\nLog file saved !\nExiting..')
 
 log = error_log()
 

@@ -51,12 +51,12 @@ seed_y : 3398103.49
 #Runtime Parameters
 map_resolution_x : 1.6850629615057993
 map_resolution_y : 1.500093213502397
-num_particles : 100000
+num_particles : 20000
 down_sample_size : 2.0
 init_cov_linear : 200.0
 init_cov_angular : 1.57
-odom_cov_lin : 0.005
-odom_cov_angular : 0.01
+odom_cov_lin : 0.05
+odom_cov_angular : 0.05
 resampling_count : 20
 
 use_pi_weighting : true
@@ -69,8 +69,8 @@ sync_queue_size : 10
 
 project_cloud : false
 
-use_dynamic_resampling : true
+use_dynamic_resampling : false
 
 estimate_gps_error  : true
 
-weight_function : exponential
+weight_function : gaussian
