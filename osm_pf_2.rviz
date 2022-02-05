@@ -150,12 +150,12 @@ Visualization Manager:
       History Length: 1
       Name: PointStamped
       Queue Size: 10
-      Radius: 10
+      Radius: 15
       Topic: /gps_utm
       Unreliable: false
       Value: true
-    - Alpha: 0.10000000149011612
-      Arrow Length: 5
+    - Alpha: 0.009999999776482582
+      Arrow Length: 10
       Axes Length: 0.30000001192092896
       Axes Radius: 0.009999999776482582
       Class: rviz/PoseArray
@@ -169,7 +169,7 @@ Visualization Manager:
       Shaft Radius: 0.009999999776482582
       Shape: Arrow (Flat)
       Topic: /osm_pose_estimate
-      Unreliable: false
+      Unreliable: true
       Value: true
     - Alpha: 1
       Autocompute Intensity Bounds: true
@@ -227,7 +227,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 1977.0521240234375
+      Distance: 783.4998168945312
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -235,9 +235,9 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 4261.447265625
-        Y: 6033.8056640625
-        Z: 299.1947021484375
+        X: 4508.98876953125
+        Y: 6199.60888671875
+        Z: 299.21917724609375
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false

@@ -73,4 +73,4 @@ use_dynamic_resampling : false
 
 estimate_gps_error  : true
 
-weight_function : gaussian
+weight_function : quadratic

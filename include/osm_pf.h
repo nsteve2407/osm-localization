@@ -89,6 +89,6 @@ namespace osmpf
         void run();
         std::shared_ptr<pose> weight_pose(std::vector<pose> Poses,std::vector<f> Weights);
         void publish_msg(std::vector<pose> X,std::vector<f> W,std_msgs::Header h);
-        f weightfunction(f distance,f road_width);
+        f weightfunction(f distance,f road_width,f intensity);
     };
 }

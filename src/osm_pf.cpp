@@ -287,7 +287,7 @@ std::vector<pose> osm_pf::find_Xbar(std::vector<pose> X_tminus1,nav_msgs::Odomet
 
 }
 
-osm_pf::f osm_pf::weightfunction(f distance,f road_width)
+osm_pf::f osm_pf::weightfunction(f distance,f road_width,f intensity)
 {
     if(weight_function=="gaussian")
     {
@@ -295,17 +295,45 @@ osm_pf::f osm_pf::weightfunction(f distance,f road_width)
         return (1/(road_width*sqrt(2*pi)))*exp(-1*((std::pow(distance,2))/(2*std::pow(road_width,2))));
 
     }
-    if(weight_function=="exponential")
+    else if(weight_function=="maplite")
     {
         return 1.0 - std::min(distance/road_width,1.0);;
     }
-    if(weight_function=="quadratic")
-    {
-        return 1.0/(std::pow(std::min(distance/road_width,1.0),2)+1);
+    else if (weight_function=="quadratic")
+    {   
+        distance = static_cast<f>(abs(distance));
+        if(distance<road_width && intensity>127.0)
+        {
+            return static_cast<f>(1.0);    
+        }
+        // distance = distance/road_width;
+        // f x = std::min(distance/road_width,1.0);
+        // if (x==1.0)
+        // {
+        //     x = 10.0;
+        // }
+        return 1.0/(std::pow(distance,2)+1.0);
     }
-    if(weight_function=="")
+    else if(weight_function=="exp_decay")
     {
-        ROS_ERROR(" No value for weighting function provided. Values must be one of: gaussian,exponential or quadratic");
+        distance = static_cast<f>(abs(distance));
+        if(distance<road_width && intensity>127.0)
+        {
+            return static_cast<f>(1.0);    
+        }
+        else
+        {
+            f w  = 1/(exp((distance/road_width)*1.2));
+            // std::cout<<"\nWeight point:"<<w;
+            return w;
+
+        }
+
+
+    }
+    else
+    {
+        ROS_ERROR(" No match for weighting function provided. Values must be one of: gaussian,maplite,exp_decay or quadratic");
         // throw ros::InvalidParameterException p();
 
     }
@@ -345,7 +373,7 @@ osm_pf::f osm_pf::find_wt_point(pcl::PointXYZI point)
     // std::cout<<"\n Distance:"<<distance<<std::endl;
     if(distance>0.0)
     {
-        wt = weightfunction(distance,r_w);
+        wt = weightfunction(distance,r_w,intensity);
         if(intensity > 127)
         {
             // std::cout<<"\n Point is a road point, intensity="<<intensity<<std::endl;
@@ -384,7 +412,7 @@ osm_pf::f osm_pf::find_wt_point(pcl::PointXYZI point)
         
         else
         {
-            wt= (f)1.0 - wt;
+            wt= static_cast<f>(1.0) - wt;
             if(use_pi_weighting)
             {
                 return wt;
