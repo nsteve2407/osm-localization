@@ -67,7 +67,7 @@ class error_log:
         
 
         if self.log:
-            self.df.to_csv('./high_freq_global_callogs_with_error.csv')
+            self.df.to_csv('./u_calib_local_quadratic.csv')
             print('\nLog file saved !\nExiting..')
 
 log = error_log()

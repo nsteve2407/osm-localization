@@ -20,6 +20,7 @@ int main(int argc,char** argv)
     // // Values to access
     std::string path;
     f min_x,min_y,max_x,max_y,res_x,res_y;
+    std::string sensing_mode;
     int resolution,num_particles;
     nh.getParam("/osm_particle_filter/path_to_dmat",path);
     nh.getParam("/osm_particle_filter/min_x",min_x);
@@ -30,6 +31,7 @@ int main(int argc,char** argv)
     nh.getParam("/osm_particle_filter/num_particles",num_particles);
     nh.getParam("/osm_particle_filter/map_resolution_x",res_x);
     nh.getParam("/osm_particle_filter/map_resolution_y",res_y);
+    nh.getParam("/osm_particle_filter/sensing_mode",sensing_mode);
     
     ROS_INFO("Parameters Loaded Successfully");
 
@@ -38,11 +40,30 @@ int main(int argc,char** argv)
     f seed_x,seed_y;
     nh.getParam("/osm_particle_filter/seed_x",seed_x);
     nh.getParam("/osm_particle_filter/seed_y",seed_y);
-    
-    std::shared_ptr<osmpf::osm_pf> pf_ptr(new osmpf::osm_pf (path,min_x,min_y,max_x,max_y,res_x,res_y,num_particles,seed_x,seed_y));
 
-    // // Run Particle Filter
-    pf_ptr->run();
+    // std::shared_ptr<osmpf::osm_pf> pf_ptr(new osmpf::osm_pf (path,min_x,min_y,max_x,max_y,res_x,res_y,num_particles,seed_x,seed_y));
+
+    // if (sensing_mode=="lidar")
+    // {
+
+    // std::shared_ptr<osmpf::osm_pf> pf_ptr(new osmpf::osm_pf (path,min_x,min_y,max_x,max_y,res_x,res_y,num_particles,seed_x,seed_y));
+
+    //     // Run Particle Filter
+
+    // }
+    // else
+    // {
+    std::shared_ptr<osmpf::osm_pf_stereo> pf_ptr(new osmpf::osm_pf_stereo (path,min_x,min_y,max_x,max_y,res_x,res_y,num_particles,seed_x,seed_y));
+    pf_ptr->run_s();
+    //     // // Run Particle Filter
+    
+
+    // }
+
+
+    
+    
+    
     
 
     // Arrayed saved in   n,e   /  lat,lon / y,x

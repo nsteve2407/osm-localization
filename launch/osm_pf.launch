@@ -8,10 +8,10 @@
 <!-- <include file="$(find robot_localization)/launch/ekf_template.launch" /> -->
 
 <include file="$(find road_seg_deeplabv3)/launch/s-layer.launch" />
-<!-- <include file="$(find osm_cartography)/launch/viz_osm.launch" > -->
+<!-- <include file="$(find osm_cartography)/launch/viz_osm.launch" /> -->
     <!-- <arg name="url" value="package://osm_cartography/tests/tamu_map.osm"/> -->
 <!-- </include> -->
-<node name="tf_map" pkg="tf" type="static_transform_publisher" args=" 738912.92 3392799.59 0 0 0 0 1 map local_map 100" />
+
 
 <!-- <node name="rviz" pkg ="rviz" type="rviz" args="-d $(find osm-localization)/osm_pf.rviz" /> -->
 
@@ -28,6 +28,6 @@
 <node pkg="osm_cartography" type="viz_osm" name="viz_osm" >
 <param name="map_url" value="$(arg url)" />
 </node>
-
+<node name="tf_map" pkg="tf" type="static_transform_publisher" args=" 738912.92 3392799.59 0 0 0 0 1 map local_map 100" />
 
 </launch>

@@ -834,3 +834,373 @@ void osm_pf::run()
 {
     sync->registerCallback(boost::bind(&osm_pf::callback,this,_1,_2));
 }
+
+
+osm_pf_stereo::osm_pf_stereo(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_res_x,f map_res_y,int particles,f seed_x,f seed_y):  osm_pf{path_to_d_mat,min_x,min_y,Max_x,Max_y,map_res_x,map_res_y,particles,seed_x,seed_y}
+{
+}
+
+void osm_pf_stereo::callback_s(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs::PointCloud2ConstPtr& z_ptr)
+{
+    nav_msgs::Odometry u = *u_ptr;
+    sensor_msgs::PointCloud2 z = *z_ptr;
+    
+    std::vector<pose> Xbar = find_Xbar(Xt,u);
+
+    std::vector<f> Wt_est  = find_Wt_s(Xbar,z);
+    // std::cout<<"\n Initial Weights calculated \n";
+
+    if(use_dynamic_resampling)
+    {
+        f n_eff = (1/w_sum_sq);
+        std::cout<<"\n Weight sum sq: "<< w_sum_sq;
+        std::cout<<"\n Number of effective particles: "<< n_eff;
+        if(n_eff < ((3*static_cast<f>(num_particles))/4) || count>20)
+        {
+            std::cout<<"\n -------------- Sampling Weights----- "<<std::endl;
+            std::vector<pose> X_t_est = sample_xt(Xbar,Wt_est);
+            Xt = X_t_est;
+            Wt = Wt_est;
+            // std::cout<<"\nWeights: "<<std::endl;
+            // for(auto x : Wt)
+            // {
+            //     std::cout<<" "<<x;
+            // }
+            count = 0;
+
+            publish_msg(X_t_est,Wt_est,u.header);
+            w_sum_sq = 1/(3*static_cast<f>(num_particles));
+            std::cout<<"\n Weight sum sq: "<< w_sum_sq;
+
+        }
+        else
+        {
+            std::cout<<"\n -------------- Not Sampling Weights----- "<<std::endl;
+            Xt = Xbar;
+            w_sum_sq = 0.0;
+
+            
+            Wt = multiply_sum_sq(Wt, Wt_est,w_sum_sq);
+            std::cout<<"\n Weight sum sq: "<< w_sum_sq;
+            count += 0;
+
+            
+            // if(w_sum_sq == 0.0)
+            // {
+            //     std::cout<<"\n Resetting Weights due to convergence to zero "<<std::endl;
+            //     w_sum_sq = 1/num_particles;
+            //     Wt  = std::vector<f>(num_particles,1.0);
+
+            // }
+
+
+            // std::cout<<"\nWeights: "<<std::endl;
+            // for(auto x : Wt)
+            // {
+            //     std::cout<<" "<<x;
+            // }
+
+
+            publish_msg(Xt,Wt,u.header);
+            count++;
+
+        }
+
+
+    }
+    else
+    {
+        if (count == resampling_count)
+        {
+
+            std::vector<pose> X_t_est = sample_xt(Xbar,Wt_est);
+            Xt = X_t_est;
+            Wt = Wt_est;
+            // std::cout<<"\nWeights: "<<std::endl;
+            // for(auto x : Wt)
+            // {
+            //     std::cout<<" "<<x;
+            // }
+            count = 0;
+
+            publish_msg(Xt,Wt,u.header);
+        }
+
+        else
+        {
+            Xt = Xbar;
+            if (use_pi_resampling)
+            {
+                Wt = Wt * Wt_est;
+            }
+            else
+            {
+            Wt = Wt + Wt_est;
+            }
+
+            // std::cout<<"\nWeights: "<<std::endl;
+            // for(auto x : Wt)
+            // {
+            //     std::cout<<" "<<x;
+            // }
+            publish_msg(Xt,Wt,u.header);
+            count++;
+        }
+    }
+
+}
+
+void osm_pf_stereo::run_s()
+{
+    sync->registerCallback(boost::bind(&osm_pf_stereo::callback_s,this,_1,_2));
+}
+
+osm_pf_stereo::f osm_pf_stereo::find_wt_point_s(pcl::PointXYZRGB point)
+{
+    int e = (int((std::round((point.x - origin_x)/map_resolution_x))) )-1;
+    int n = (int(std::round((point.y - origin_y)/map_resolution_y)))-1;
+    int intensity = int(point.rgb);
+    f wt,distance,r_w,d2;
+    r_w = (f)road_width;
+    // std::cout<<"\n e:"<<e<<" n: "<<n<<" intensity:"<<intensity;
+
+    // std::cout<<"\nShape n:"<<d_matrix.shape()[1]<<" e:"<<d_matrix.shape()[1]<<std::endl;
+
+    // if(point.x>origin_x && point.x<max_x && point.y>origin_y && point.y<max_y)
+    // {
+    //     distance = d_matrix(n,e,0);
+
+    // }
+    if(e>=0 && e< d_matrix.shape()[1] && n>=0  && n<d_matrix.shape()[0])
+    {
+        distance = d_matrix(n,e,0);
+
+    }
+    else
+    {
+        distance = -1.0;
+    }
+    
+    // if(distance<15 && i==255.0)
+    // {
+    //     std::cout<<"\nDistance less than 15m";
+    // }
+    // std::cout<<"\n Distance:"<<distance<<std::endl;
+    if(distance>0.0)
+    {
+        wt = weightfunction(distance,r_w,intensity);
+        if(intensity > 127)
+        {
+            // std::cout<<"\n Point is a road point, intensity="<<intensity<<std::endl;
+            if(use_pi_weighting)
+            {
+                return wt;
+            }            
+
+            else
+            {
+                if (wt>0.7)
+                    {   
+                        // ROS_INFO("Got road point");
+                        return 1000.0;
+                    }
+                if (wt>0.5)
+                {   
+                    // ROS_INFO("Got road point");
+                    return 5.0;
+                }
+
+                if (wt>0.1 && wt<0.5)
+                {   
+                    // ROS_INFO("Got road point");
+                    return 0.5;
+                }
+                else
+                {
+                    return -1.0;
+                }
+            }
+            
+
+        }
+           
+        
+        else
+        {
+            wt= static_cast<f>(1.0) - wt;
+            if(use_pi_weighting)
+            {
+                return wt;
+            }
+
+
+            else
+            {
+                    if (wt>0.7)
+                {   
+                    // ROS_INFO("Got road point");
+                    return 1000.0;
+                }
+                if (wt>0.5)
+                {   
+                    // ROS_INFO("Got road point");
+                    return 5.0;
+                }
+
+                if (wt>0.1 && wt<0.5)
+                {   
+                    // ROS_INFO("Got road point");
+                    return 0.5;
+                }
+                else
+                {
+                    return -1.0;
+                }
+            }
+
+
+        }
+
+    }
+    else
+    {
+        // wt =-10.0; //Need to test this
+        if(use_pi_weighting)
+        {
+            return 0.1;
+        }
+        else
+        {
+            return 0.0;
+        }
+    }
+    
+
+
+
+    return wt;
+    
+}
+
+osm_pf_stereo::f osm_pf_stereo::find_wt_s(pose xbar,pcl::PointCloud<pcl::PointXYZRGB>::Ptr p_cloud_filtered)
+{
+
+    Eigen::Matrix4f T;
+    T<<cos(xbar.theta), -sin(xbar.theta),0, xbar.x,
+       sin(xbar.theta), cos(xbar.theta), 0, xbar.y,
+       0, 0, 1,0,
+       0,0,0,1;
+    
+    pcl::PointCloud<pcl::PointXYZRGB> pcl_cloud_map_frame;
+
+    pcl::transformPointCloud(*p_cloud_filtered,pcl_cloud_map_frame,T);
+
+    if(project_cloud)
+    {
+        sensor_msgs::PointCloud2 pc_cloud;
+        pcl::toROSMsg(pcl_cloud_map_frame,pc_cloud);
+        pc_cloud.header.frame_id  = "map";
+        pf_cloud_pub.publish(pc_cloud);
+    }
+    // std::cout<<"\nCloud Transformed";
+    // std::cout<<"\nOutcloud size in function after  transforming: "<<pcl_cloud_map_frame.points.size()<<std::endl;
+
+    osm_pf_stereo::f weight;
+    osm_pf_stereo::f w;
+    if (use_pi_weighting)
+    {
+        weight = 1.0;    
+    }
+    else
+    {
+        weight = 0.0;
+    }
+    
+    for(int i=0;i<pcl_cloud_map_frame.points.size();i++)
+    {
+        pcl::PointXYZRGB p = pcl_cloud_map_frame.points[i];
+        w = find_wt_point_s(p);
+        // std::cout<<"\nGot weight="<<w;
+        if(use_pi_weighting)
+        {
+            weight = weight*w*pi_gain;
+        }
+        else
+        {
+            weight = weight+w;
+        }
+
+        
+    }
+
+    // std::cout<<"\nWeight calculated at curent step: "<<weight<<std::endl;
+
+    return weight;
+
+
+}
+pcl::PointCloud<pcl::PointXYZRGB>::Ptr osm_pf_stereo::drop_zeros_s(sensor_msgs::PointCloud2 p_cloud)
+{
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr out_cloud(new pcl::PointCloud<pcl::PointXYZRGB>) ;
+    pcl::PointCloud<pcl::PointXYZRGB> pcl_cloud;
+    pcl::fromROSMsg(p_cloud,pcl_cloud);
+
+    // std::cout<<"Incloud size before dropping zeros: "<<pcl_cloud.points.size()<<std::endl;
+
+
+    for(auto point : pcl_cloud.points)
+    {
+        if(point.x*point.x > 0.01 && point.y*point.y> 0.01 &&  point.z*point.z> 0.01 & std::sqrt(point.x*point.x+point.y*point.y+point.z*point.z) <10)
+        {
+            out_cloud->points.push_back(point);
+        }
+    }
+    // std::cout<<"Outcloud size after dropping zeros: "<<out_cloud.points.size()<<std::endl;
+    return out_cloud;
+}
+
+
+pcl::PointCloud<pcl::PointXYZRGB>::Ptr osm_pf_stereo::downsize_s(pcl::PointCloud<pcl::PointXYZRGB>::Ptr incloud)
+{
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr p_cloud_filtered(new pcl::PointCloud<pcl::PointXYZRGB>);
+    pcl::VoxelGrid<pcl::PointXYZRGB> filter;
+    filter.setInputCloud(incloud);
+    filter.setLeafSize(down_sample_size,down_sample_size,down_sample_size);
+    filter.filter(*p_cloud_filtered);
+    // std::cout<<"\nFiltered!";
+
+    return p_cloud_filtered;
+}
+
+
+std::vector<osm_pf_stereo::f> osm_pf_stereo::find_Wt_s(std::vector<pose> Xtbar,sensor_msgs::PointCloud2 p_cloud)
+{
+    // Preprocess PointCloud
+    auto start = std::chrono::high_resolution_clock::now();
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr p_cloud_ptr= drop_zeros_s(p_cloud);
+    auto stop = std::chrono::high_resolution_clock::now();
+
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop-start);
+    // std::cout<<"\n Dropping zeros took :"<< duration.count() << " microseconds ";
+
+
+    start = std::chrono::high_resolution_clock::now();
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr p_cloud_filtered = downsize_s(p_cloud_ptr);
+    stop = std::chrono::high_resolution_clock::now();
+    duration = std::chrono::duration_cast<std::chrono::microseconds>(stop-start);
+    // std::cout<<"\n Downsampling took :"<< duration.count() << " microseconds ";
+
+
+
+    // std::cout<<"\nOutcloud size in function after  downsampling: "<<p_cloud_filtered->points.size()<<std::endl;
+    // 
+    std::vector<f> weights;
+    f weight;
+    for(pose p: Xtbar)
+    {
+        weight=find_wt_s(p,p_cloud_filtered);
+        weights.push_back(weight);
+    }
+
+    return weights;
+}

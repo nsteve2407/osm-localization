@@ -29,8 +29,8 @@ namespace osmpf
 
     class osm_pf
     {
+        public:
         typedef _Float64 f;
-        private:
         // Attributes
         xt::xarray<f> d_matrix;
         float origin_x;
@@ -90,5 +90,21 @@ namespace osmpf
         std::shared_ptr<pose> weight_pose(std::vector<pose> Poses,std::vector<f> Weights);
         void publish_msg(std::vector<pose> X,std::vector<f> W,std_msgs::Header h);
         f weightfunction(f distance,f road_width,f intensity);
+    };
+
+    class osm_pf_stereo: public osm_pf
+    {
+        public:
+        typedef _Float64 f;
+        osm_pf_stereo(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_res_x,f map_res_y,int particles=100,f seed_x=0,f seed_y=0);
+        f find_wt_s(pose xbar,pcl::PointCloud<pcl::PointXYZRGB>::Ptr p_cloud_filtered);
+        f find_wt_point_s(pcl::PointXYZRGB point);
+        std::vector<f> find_Wt_s(std::vector<pose> Xtbar,sensor_msgs::PointCloud2 p_cloud);
+        pcl::PointCloud<pcl::PointXYZRGB>::Ptr drop_zeros_s(sensor_msgs::PointCloud2 p_cloud);
+        pcl::PointCloud<pcl::PointXYZRGB>::Ptr downsize_s(pcl::PointCloud<pcl::PointXYZRGB>::Ptr);
+        void callback_s(const nav_msgs::OdometryConstPtr&,const sensor_msgs::PointCloud2ConstPtr&);
+        void run_s();
+
+        
     };
 }
