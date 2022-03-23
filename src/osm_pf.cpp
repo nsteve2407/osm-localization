@@ -17,6 +17,63 @@
 #include<chrono>
 using namespace osmpf;
 
+osm_pf::f mean(std::vector<osm_pf::f> Wt)
+{
+    osm_pf::f count = 0;
+    for(int i=0;i<Wt.size();i++)
+    {
+        if (Wt[i]>1e-20)
+        {count+=1;}
+    }
+    return count/Wt.size();
+}
+
+void osm_pf::std_dibn()
+{
+    std::vector<double> x(Xt.size());
+    std::vector<double> y(Xt.size());
+    double sum_x,sum_y;
+    sum_x=0;
+    sum_y=0;
+     
+    for(int i=0;i<Xt.size();i++)
+    {
+        x[i]=double(Xt[i].x);y[i]=double(Xt[i].y);
+        sum_x+=x[i];
+        sum_y+=y[i];
+    }
+
+    double mean_x = sum_x / x.size();
+
+    std::vector<double> diff_x(x.size());
+    std::transform(x.begin(), x.end(), diff_x.begin(), [mean_x](double x) { return x - mean_x; });
+    double sq_sum_x = std::inner_product(diff_x.begin(), diff_x.end(), diff_x.begin(), 0.0);
+    double stdev_x = std::sqrt(sq_sum_x / x.size());
+
+    double mean_y = sum_y / y.size();
+
+    std::vector<double> diff_y(y.size());
+    std::transform(y.begin(), y.end(), diff_y.begin(), [mean_y](double y) { return y - mean_y; });
+    double sq_sum_y = std::inner_product(diff_y.begin(), diff_y.end(), diff_y.begin(), 0.0);
+    double stdev_y = std::sqrt(sq_sum_y / y.size());
+
+    std::cout<<"Std.dev X: "<<stdev_x<<" Std.dev Y: "<<stdev_y<<std::endl;
+
+    std_x = stdev_x;
+    std_y = stdev_y;
+
+
+}
+
+void osm_pf::update_num_particles()
+{
+    if (std_x<std_lim && std_y<std_lim)
+    {
+        num_particles = int(m*((std_x+std_y)/2)+min_particles);
+    }
+
+}
+
 template <typename T>
 std::vector<T> operator+(const std::vector<T>& a, const std::vector<T>& b)
 {
@@ -100,6 +157,11 @@ std::vector<T> sum_sum_sq(const std::vector<T>& a, const std::vector<T>& b,osm_p
 osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_res_x,f map_res_y,int particles,f seed_x,f seed_y)
 {
     num_particles = particles;
+    max_particles = particles;
+    
+    
+    
+
     d_matrix = xt::load_npy<f>(path_to_d_mat);
     count = 0;
     origin_x = min_x;
@@ -125,8 +187,12 @@ osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_r
     nh.getParam("/osm_particle_filter/use_dynamic_resampling",use_dynamic_resampling);
     nh.getParam("/osm_particle_filter/estimate_gps_error",estimate_gps_error);
     nh.getParam("/osm_particle_filter/weight_function",weight_function);
+    nh.getParam("/osm_particle_filter/min_particles",min_particles);
+    nh.getParam("/osm_particle_filter/std_lim",std_lim);
+    nh.getParam("/osm_particle_filter/adaptive_mode",adaptive_mode);
 
     
+    m = (max_particles-min_particles)/std_lim;
 
     pf_publisher = nh.advertise<geometry_msgs::PoseArray>("osm_pose_estimate",100);
     pf_lat_lon = nh.advertise<geometry_msgs::PoseArray>("osm_lat_lon",100);
@@ -149,7 +215,7 @@ osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_r
     }
     else if (use_pi_weighting && !use_pi_resampling)
     {
-        Wt  = std::vector<f>(num_particles,0.0);
+        Wt  = std::vector<f>(num_particles,1.0);
     }
     else if(!use_pi_weighting && use_pi_resampling)
     
@@ -591,18 +657,18 @@ std::vector<osm_pf::f> osm_pf::find_Wt(std::vector<pose> Xtbar,sensor_msgs::Poin
 
 std::vector<pose> osm_pf::sample_xt(std::vector<pose> Xbar_t,std::vector<f>& Wt)
 {
-    std::vector<pose> Xt_gen;
-    std::vector<f> Wt_gen;
+    std::vector<pose> Xt_gen(num_particles);
+    // std::vector<f> Wt_gen;
     // std::default_random_engine generator;
     std::random_device rd;
     std::mt19937 gen(rd());
     std::discrete_distribution<int> distribution(Wt.begin(),Wt.end());
 
-    for(int i=0;i<Xbar_t.size();i++)
+    for(int i=0;i<num_particles;i++)
     {
         int idx = distribution(gen);
-        Xt_gen.push_back(Xbar_t[idx]);
-        Wt_gen.push_back(Wt[idx]);
+        Xt_gen[i]= Xbar_t[idx];
+        // Wt_gen.push_back(Wt[idx]);
     }
     // Wt = Wt_gen;
     Wt = std::vector<f>(num_particles,1.0);
@@ -789,10 +855,16 @@ void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs:
     {
         if (count == resampling_count)
         {
-
+            // avg_wt = mean(Wt_est);
+            // std::cout<<"Average percentage:"<<avg_wt<<std::endl;
+            if(adaptive_mode)
+            {
+                update_num_particles();
+            }
             std::vector<pose> X_t_est = sample_xt(Xbar,Wt_est);
             Xt = X_t_est;
             Wt = Wt_est;
+
             // std::cout<<"\nWeights: "<<std::endl;
             // for(auto x : Wt)
             // {
@@ -801,10 +873,14 @@ void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs:
             count = 0;
 
             publish_msg(Xt,Wt,u.header);
+            
+            
         }
 
         else
         {
+            // avg_wt = mean(Wt_est);
+            // std::cout<<"Average percentage:"<<avg_wt<<std::endl;
             Xt = Xbar;
             if (use_pi_resampling)
             {
@@ -815,6 +891,7 @@ void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs:
             Wt = Wt + Wt_est;
             }
 
+
             // std::cout<<"\nWeights: "<<std::endl;
             // for(auto x : Wt)
             // {
@@ -822,6 +899,9 @@ void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs:
             // }
             publish_msg(Xt,Wt,u.header);
             count++;
+            std_dibn();
+            std::cout<<"Number of particles: "<<num_particles<<std::endl;
+            
         }
     }
 
@@ -912,10 +992,16 @@ void osm_pf_stereo::callback_s(const nav_msgs::OdometryConstPtr& u_ptr,const sen
     {
         if (count == resampling_count)
         {
-
+            // avg_wt = mean(Wt_est);
+            // std::cout<<"Average percentage:"<<avg_wt<<std::endl;
+            if(adaptive_mode)
+            {
+                update_num_particles();
+            }
             std::vector<pose> X_t_est = sample_xt(Xbar,Wt_est);
             Xt = X_t_est;
             Wt = Wt_est;
+
             // std::cout<<"\nWeights: "<<std::endl;
             // for(auto x : Wt)
             // {
@@ -924,10 +1010,14 @@ void osm_pf_stereo::callback_s(const nav_msgs::OdometryConstPtr& u_ptr,const sen
             count = 0;
 
             publish_msg(Xt,Wt,u.header);
+            
+            
         }
 
         else
         {
+            // avg_wt = mean(Wt_est);
+            // std::cout<<"Average percentage:"<<avg_wt<<std::endl;
             Xt = Xbar;
             if (use_pi_resampling)
             {
@@ -938,6 +1028,7 @@ void osm_pf_stereo::callback_s(const nav_msgs::OdometryConstPtr& u_ptr,const sen
             Wt = Wt + Wt_est;
             }
 
+
             // std::cout<<"\nWeights: "<<std::endl;
             // for(auto x : Wt)
             // {
@@ -945,6 +1036,9 @@ void osm_pf_stereo::callback_s(const nav_msgs::OdometryConstPtr& u_ptr,const sen
             // }
             publish_msg(Xt,Wt,u.header);
             count++;
+            std_dibn();
+            std::cout<<"Number of particles: "<<num_particles<<std::endl;
+            
         }
     }
 

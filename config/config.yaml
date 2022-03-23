@@ -71,10 +71,10 @@ init_cov_linear : 600.0
 init_cov_angular : 1.57
 odom_cov_lin : 0.05
 odom_cov_angular : 0.05
-resampling_count : 20
+resampling_count : 10
 
 use_pi_weighting : true
-use_pi_resampling : true
+use_pi_resampling : false
 
 road_width : 10.0
 pi_gain : 1.0
@@ -88,3 +88,8 @@ use_dynamic_resampling : false
 estimate_gps_error  : true
 
 weight_function : gaussian
+
+# Additoinal
+adaptive_mode : true
+min_particles : 10000
+std_lim : 500.0

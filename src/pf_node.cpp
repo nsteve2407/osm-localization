@@ -47,7 +47,7 @@ int main(int argc,char** argv)
     // {
 
     // std::shared_ptr<osmpf::osm_pf> pf_ptr(new osmpf::osm_pf (path,min_x,min_y,max_x,max_y,res_x,res_y,num_particles,seed_x,seed_y));
-
+    // pf_ptr->run();
     //     // Run Particle Filter
 
     // }

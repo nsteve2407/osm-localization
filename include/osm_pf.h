@@ -44,7 +44,7 @@ namespace osmpf
         float odom_cov_lin;
         float odom_cov_angular;
         int count,resampling_count;
-        bool use_pi_weighting, use_pi_resampling,project_cloud,use_dynamic_resampling,estimate_gps_error;
+        bool use_pi_weighting, use_pi_resampling,project_cloud,use_dynamic_resampling,estimate_gps_error, adaptive_mode;
         f w_sum_sq;
         int road_width,queue_size,sync_queue_size;
         f pi_gain;
@@ -62,11 +62,16 @@ namespace osmpf
         typedef message_filters::sync_policies::ApproximateTime<nav_msgs::Odometry,sensor_msgs::PointCloud2> sync_policy;
         typedef message_filters::Synchronizer<sync_policy> Sync;
         std::shared_ptr<Sync> sync;
-        int num_particles;
+
+        int num_particles, min_particles, max_particles;
+        float m, std_lim;
+        double std_x,std_y;
+        
         // std::shared_ptr<std::vector<pose>> Xt;
         // std::shared_ptr<std::vector<f>> Wt;
         std::vector<pose> Xt;
         std::vector<f> Wt;
+        float avg_wt;
 
         nav_msgs::Odometry prev_odom;
         bool seed_set;
@@ -90,6 +95,8 @@ namespace osmpf
         std::shared_ptr<pose> weight_pose(std::vector<pose> Poses,std::vector<f> Weights);
         void publish_msg(std::vector<pose> X,std::vector<f> W,std_msgs::Header h);
         f weightfunction(f distance,f road_width,f intensity);
+        void std_dibn();
+        void update_num_particles();
     };
 
     class osm_pf_stereo: public osm_pf
