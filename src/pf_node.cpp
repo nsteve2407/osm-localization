@@ -41,27 +41,39 @@ int main(int argc,char** argv)
     nh.getParam("/osm_particle_filter/seed_x",seed_x);
     nh.getParam("/osm_particle_filter/seed_y",seed_y);
 
-    // std::shared_ptr<osmpf::osm_pf> pf_ptr(new osmpf::osm_pf (path,min_x,min_y,max_x,max_y,res_x,res_y,num_particles,seed_x,seed_y));
+    
+    std::shared_ptr<osmpf::osm_pf_stereo> pf_ptr_s;
+    pf_ptr_s.reset(new osmpf::osm_pf_stereo (path,min_x,min_y,max_x,max_y,res_x,res_y,num_particles,seed_x,seed_y));
 
+    if (sensing_mode=="lidar")
+    {
+        
+        // pf_ptr_s.reset(new osmpf::osm_pf_stereo (path,min_x,min_y,max_x,max_y,res_x,res_y,num_particles,seed_x,seed_y));
+        pf_ptr_s->run();
+        
+        // Run Particle Filter
+
+    }
+    else
+    {
+
+        // pf_ptr_s.reset(new osmpf::osm_pf_stereo (path,min_x,min_y,max_x,max_y,res_x,res_y,num_particles,seed_x,seed_y));
+        pf_ptr_s->run_s();
+        // // Run Particle Filter
+    
+
+    }
     // if (sensing_mode=="lidar")
     // {
-
-    // std::shared_ptr<osmpf::osm_pf> pf_ptr(new osmpf::osm_pf (path,min_x,min_y,max_x,max_y,res_x,res_y,num_particles,seed_x,seed_y));
-    // pf_ptr->run();
-    //     // Run Particle Filter
-
+    //     pf_ptr->run();
     // }
     // else
     // {
-    std::shared_ptr<osmpf::osm_pf_stereo> pf_ptr(new osmpf::osm_pf_stereo (path,min_x,min_y,max_x,max_y,res_x,res_y,num_particles,seed_x,seed_y));
-    pf_ptr->run_s();
-    //     // // Run Particle Filter
-    
-
+    //     pf_ptr_s->run();
+    //     pf_ptr.reset();
     // }
-
-
     
+    // pf_ptr_s->run_s();
     
     
     

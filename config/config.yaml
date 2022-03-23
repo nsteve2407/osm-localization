@@ -1,5 +1,5 @@
 path_to_dmat  : /home/mkz/catkin_ws/src/osm-localization/distance_maps/run1_filtered.npy
-sensing_mode : 'lidar'
+sensing_mode : stereo
 #msc
 # min_x : 753414.1983092
 # max_x : 755946.5593901
@@ -67,7 +67,7 @@ map_resolution_y : 1.500093213502397
 # map_resolution_y : 1.4999315408538794
 num_particles : 80000
 down_sample_size : 1.0
-init_cov_linear : 600.0
+init_cov_linear : 400.0
 init_cov_angular : 1.57
 odom_cov_lin : 0.05
 odom_cov_angular : 0.05
@@ -78,7 +78,7 @@ use_pi_resampling : false
 
 road_width : 10.0
 pi_gain : 1.0
-queue_size : 100
+queue_size : 1000
 sync_queue_size : 10
 
 project_cloud : false
@@ -91,5 +91,5 @@ weight_function : gaussian
 
 # Additoinal
 adaptive_mode : true
-min_particles : 10000
-std_lim : 500.0
+min_particles : 8000
+std_lim : 100.0
