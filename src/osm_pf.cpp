@@ -158,6 +158,9 @@ osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_r
 {
     num_particles = particles;
     max_particles = particles;
+
+
+
     
     
     
@@ -194,6 +197,16 @@ osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_r
     
     m = (max_particles-min_particles)/std_lim;
 
+    // Initialize Random generators
+    gen.reset(new std::default_random_engine);
+    dist_ptr.reset(new std::normal_distribution<f>(osm_pf::f(0.0),odom_cov_lin));
+    dist_x = *dist_ptr;
+    dist_ptr.reset(new std::normal_distribution<f>(osm_pf::f(0.0),odom_cov_angular));
+    dist_theta = *dist_ptr;
+    
+    // dist_theta.reset(new std::normal_distribution<f>(osm_pf::f(0.0),odom_cov_angular));
+    // dist_x.reset(osm_pf::f(0.0),odom_cov_lin);
+    // Initialize ROS attributes
     pf_publisher = nh.advertise<geometry_msgs::PoseArray>("osm_pose_estimate",100);
     pf_lat_lon = nh.advertise<geometry_msgs::PoseArray>("osm_lat_lon",100);
     pf_cloud_pub = nh.advertise<sensor_msgs::PointCloud2>("pf_cloud_map_frame",100);
@@ -317,12 +330,9 @@ pose osm_pf::find_xbar(pose x_tminus1,f dx,f dy, f dtheta)
     // std::cout<<"\n x_tmins1.theta = "<<x_tminus1.theta<<" dtheta:"<<dtheta<<" x_t.theta = "<<theta;  
     // alpha = alpha +dtheta;
     // std::default_random_engine generator;
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::normal_distribution<f> dist_x(e,odom_cov_lin);
-    std::normal_distribution<f> dist_y(n,odom_cov_lin);
-    std::normal_distribution<f> dist_theta(theta,odom_cov_angular);
-    pose p_k_bar(dist_x(gen),dist_y(gen),dist_theta(gen));
+
+
+    pose p_k_bar(e+dist_x(*gen),n+dist_x(*gen),theta+dist_theta(*gen));
     return p_k_bar;
 }
 
@@ -855,8 +865,8 @@ void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs:
     {
         if (count == resampling_count)
         {
-            // avg_wt = mean(Wt_est);
-            // std::cout<<"Average percentage:"<<avg_wt<<std::endl;
+            std_dibn();
+            std::cout<<"Number of particles: "<<num_particles<<std::endl;
             if(adaptive_mode)
             {
                 update_num_particles();
@@ -899,8 +909,7 @@ void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs:
             // }
             publish_msg(Xt,Wt,u.header);
             count++;
-            std_dibn();
-            std::cout<<"Number of particles: "<<num_particles<<std::endl;
+
             
         }
     }
@@ -925,9 +934,17 @@ void osm_pf_stereo::callback_s(const nav_msgs::OdometryConstPtr& u_ptr,const sen
     nav_msgs::Odometry u = *u_ptr;
     sensor_msgs::PointCloud2 z = *z_ptr;
     
+    // auto start = std::chrono::high_resolution_clock::now();
     std::vector<pose> Xbar = find_Xbar(Xt,u);
+    // auto stop = std::chrono::high_resolution_clock::now();
+    // auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop-start);
+    // std::cout<<"Translation took: "<<duration.count()<<std::endl;
 
+    // start = std::chrono::high_resolution_clock::now();
     std::vector<f> Wt_est  = find_Wt_s(Xbar,z);
+    // stop = std::chrono::high_resolution_clock::now();
+    // duration = std::chrono::duration_cast<std::chrono::microseconds>(stop-start);
+    // std::cout<<"Weight updating took: "<<duration.count()<<std::endl;
     // std::cout<<"\n Initial Weights calculated \n";
 
     if(use_dynamic_resampling)
@@ -992,8 +1009,8 @@ void osm_pf_stereo::callback_s(const nav_msgs::OdometryConstPtr& u_ptr,const sen
     {
         if (count == resampling_count)
         {
-            // avg_wt = mean(Wt_est);
-            // std::cout<<"Average percentage:"<<avg_wt<<std::endl;
+            std_dibn();
+            std::cout<<"Number of particles: "<<num_particles<<std::endl;
             if(adaptive_mode)
             {
                 update_num_particles();
@@ -1036,8 +1053,8 @@ void osm_pf_stereo::callback_s(const nav_msgs::OdometryConstPtr& u_ptr,const sen
             // }
             publish_msg(Xt,Wt,u.header);
             count++;
-            std_dibn();
-            std::cout<<"Number of particles: "<<num_particles<<std::endl;
+            // std_dibn();
+            // std::cout<<"Number of particles: "<<num_particles<<std::endl;
             
         }
     }
@@ -1275,14 +1292,14 @@ std::vector<osm_pf_stereo::f> osm_pf_stereo::find_Wt_s(std::vector<pose> Xtbar,s
     auto stop = std::chrono::high_resolution_clock::now();
 
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop-start);
-    // std::cout<<"\n Dropping zeros took :"<< duration.count() << " microseconds ";
+    std::cout<<"\n Dropping zeros took :"<< duration.count() << " microseconds ";
 
 
     start = std::chrono::high_resolution_clock::now();
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr p_cloud_filtered = downsize_s(p_cloud_ptr);
     stop = std::chrono::high_resolution_clock::now();
     duration = std::chrono::duration_cast<std::chrono::microseconds>(stop-start);
-    // std::cout<<"\n Downsampling took :"<< duration.count() << " microseconds ";
+    std::cout<<"\n Downsampling took :"<< duration.count() << " microseconds ";
 
 
 
@@ -1290,11 +1307,17 @@ std::vector<osm_pf_stereo::f> osm_pf_stereo::find_Wt_s(std::vector<pose> Xtbar,s
     // 
     std::vector<f> weights;
     f weight;
+    start = std::chrono::high_resolution_clock::now();
     for(pose p: Xtbar)
     {
         weight=find_wt_s(p,p_cloud_filtered);
         weights.push_back(weight);
     }
+    stop = std::chrono::high_resolution_clock::now();
+
+    duration = std::chrono::duration_cast<std::chrono::microseconds>(stop-start);
+    std::cout<<"\n Total weighting took :"<< duration.count() << " microseconds ";
+
 
     return weights;
 }

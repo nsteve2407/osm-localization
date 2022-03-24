@@ -17,7 +17,7 @@ class error_log:
         self.pf_e = []
         self.pf_theta = []
         self.count=0
-        self.log =False
+        self.log =True
         self.gps_pub = rp.Publisher("gps_utm",PointStamped,queue_size=100)
         
 
@@ -67,7 +67,7 @@ class error_log:
         
 
         if self.log:
-            self.df.to_csv('./u_calib_local_quadratic.csv')
+            self.df.to_csv('./stereo_s_calib_global_gaussian.csv')
             print('\nLog file saved !\nExiting..')
 
 log = error_log()

@@ -77,6 +77,14 @@ namespace osmpf
         bool seed_set;
         f init_x;
         f init_y;
+        // Random Generators
+        // std::random_device rd;
+        // std::mt19937 gen;
+        std::shared_ptr<std::default_random_engine> gen; 
+        std::shared_ptr<std::normal_distribution<f>> dist_ptr;
+        std::normal_distribution<f> dist_x,dist_theta;
+        // std::normal_distribution<f> dist_x;
+
         public:
         // Methods
         osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_res_x,f map_res_y,int particles=100,f seed_x=0,f seed_y=0);
