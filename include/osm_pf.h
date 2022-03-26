@@ -11,6 +11,10 @@
 #include<vector>
 #include<pcl-1.10/pcl/point_types.h>
 #include<nav_msgs/Odometry.h>
+#include <pcl/point_types.h>
+#include <pcl/filters/passthrough.h>
+#include <pcl/point_cloud.h>
+#include<std_msgs/Header.h>
 
 namespace osmpf
 {
@@ -25,39 +29,97 @@ namespace osmpf
 
     class osm_pf
     {
+        public:
         typedef _Float64 f;
-        private:
         // Attributes
         xt::xarray<f> d_matrix;
         float origin_x;
         float origin_y;
         float max_x;
         float max_y;
+        float map_resolution_x,map_resolution_y;
+        float down_sample_size;
+        float init_cov_linear;
+        float init_cov_angular;
+        float odom_cov_lin;
+        float odom_cov_angular;
+        int count,resampling_count;
+        bool use_pi_weighting, use_pi_resampling,project_cloud,use_dynamic_resampling,estimate_gps_error, adaptive_mode;
+        f w_sum_sq;
+        int road_width,queue_size,sync_queue_size;
+        f pi_gain;
+        std::string weight_function;
+
+
         ros::NodeHandle nh;
         ros::Publisher pf_publisher;
+        ros::Publisher pf_lat_lon;
+        ros::Publisher pf_cloud_pub; 
+        ros::Publisher pf_avg_pub;
+        // ros::Publisher pf_pose;
         message_filters::Subscriber<nav_msgs::Odometry> odom_sub;
         message_filters::Subscriber<sensor_msgs::PointCloud2> pc_sub;
         typedef message_filters::sync_policies::ApproximateTime<nav_msgs::Odometry,sensor_msgs::PointCloud2> sync_policy;
         typedef message_filters::Synchronizer<sync_policy> Sync;
         std::shared_ptr<Sync> sync;
-        int num_particles;
+
+        int num_particles, min_particles, max_particles;
+        float m, std_lim;
+        double std_x,std_y;
+        
         // std::shared_ptr<std::vector<pose>> Xt;
         // std::shared_ptr<std::vector<f>> Wt;
         std::vector<pose> Xt;
         std::vector<f> Wt;
-        f cov_lin, cov_angular;
+        float avg_wt;
+
         nav_msgs::Odometry prev_odom;
+        bool seed_set;
+        f init_x;
+        f init_y;
+        // Random Generators
+        // std::random_device rd;
+        // std::mt19937 gen;
+        std::shared_ptr<std::default_random_engine> gen; 
+        std::shared_ptr<std::normal_distribution<f>> dist_ptr;
+        std::normal_distribution<f> dist_x,dist_theta;
+        // std::normal_distribution<f> dist_x;
+
         public:
         // Methods
-        osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,int particles=100);
+        osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_res_x,f map_res_y,int particles=100,f seed_x=0,f seed_y=0);
         void init_particles();
-        pose find_xbar(pose x_tminus1,nav_msgs::Odometry odom);
+        pose find_xbar(pose x_tminus1,f dx,f dy, f dtheta);
         std::vector<pose> find_Xbar(std::vector<pose> X_tminus1,nav_msgs::Odometry odom);
-        f find_wt(pose xbar,sensor_msgs::PointCloud2 p_cloud);
+        f find_wt(pose xbar,pcl::PointCloud<pcl::PointXYZI>::Ptr p_cloud_filtered);
         f find_wt_point(pcl::PointXYZI point);
         std::vector<f> find_Wt(std::vector<pose> Xtbar,sensor_msgs::PointCloud2 p_cloud);
-        std::vector<pose> sample_xt(std::vector<pose> Xbar_t,std::vector<f> Wt);
+        std::vector<pose> sample_xt(std::vector<pose> Xbar_t,std::vector<f>& Wt);
         void callback(const nav_msgs::OdometryConstPtr&,const sensor_msgs::PointCloud2ConstPtr&);
+        pcl::PointCloud<pcl::PointXYZI>::Ptr drop_zeros(sensor_msgs::PointCloud2 p_cloud);
+        void setSeed(f x,f y);
+        pcl::PointCloud<pcl::PointXYZI>::Ptr downsize(pcl::PointCloud<pcl::PointXYZI>::Ptr);
         void run();
+        std::shared_ptr<pose> weight_pose(std::vector<pose> Poses,std::vector<f> Weights);
+        void publish_msg(std::vector<pose> X,std::vector<f> W,std_msgs::Header h);
+        f weightfunction(f distance,f road_width,f intensity);
+        void std_dibn();
+        void update_num_particles();
+    };
+
+    class osm_pf_stereo: public osm_pf
+    {
+        public:
+        typedef _Float64 f;
+        osm_pf_stereo(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_res_x,f map_res_y,int particles=100,f seed_x=0,f seed_y=0);
+        f find_wt_s(pose xbar,pcl::PointCloud<pcl::PointXYZRGB>::Ptr p_cloud_filtered);
+        f find_wt_point_s(pcl::PointXYZRGB point);
+        std::vector<f> find_Wt_s(std::vector<pose> Xtbar,sensor_msgs::PointCloud2 p_cloud);
+        pcl::PointCloud<pcl::PointXYZRGB>::Ptr drop_zeros_s(sensor_msgs::PointCloud2 p_cloud);
+        pcl::PointCloud<pcl::PointXYZRGB>::Ptr downsize_s(pcl::PointCloud<pcl::PointXYZRGB>::Ptr);
+        void callback_s(const nav_msgs::OdometryConstPtr&,const sensor_msgs::PointCloud2ConstPtr&);
+        void run_s();
+
+        
     };
 }

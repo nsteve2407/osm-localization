@@ -42,10 +42,16 @@ include
   ${PCL_INCLUDE_DIRS}
 
 )
+add_definitions(${PCL_DEFINITIONS})
 add_library(osmpf /home/mkz/catkin_ws/src/osm-localization/src/osm_pf.cpp)
+add_library(utmlib /home/mkz/catkin_ws/src/osm-localization/src/utm.cpp)
+
+include_directories(${PCL_INCLUDE_DIRS})
+link_directories(${PCL_LIBRARY_DIRS})
+add_definitions(${PCL_DEFINITIONS})
 
 add_executable(pf_node src/pf_node.cpp)
-target_link_libraries(pf_node osmpf ${catkin_LIBRARIES} -xc++ 
+target_link_libraries(pf_node osmpf utmlib ${catkin_LIBRARIES} -xc++ 
 ${xtensor_LIBRARIES} 
 ${PCL_LIBRARIES}
 ${Boost_LIBRARIES}
