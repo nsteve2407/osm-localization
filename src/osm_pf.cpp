@@ -1072,7 +1072,7 @@ osm_pf_stereo::f osm_pf_stereo::find_wt_point_s(pcl::PointXYZRGB point)
     int n = (int(std::round((point.y - origin_y)/map_resolution_y)))-1;
     int intensity = int(point.rgb);
     f wt,distance,r_w,d2;
-    r_w = (f)road_width;
+    // r_w = (f)road_width;
     // std::cout<<"\n e:"<<e<<" n: "<<n<<" intensity:"<<intensity;
 
     // std::cout<<"\nShape n:"<<d_matrix.shape()[1]<<" e:"<<d_matrix.shape()[1]<<std::endl;
@@ -1099,7 +1099,7 @@ osm_pf_stereo::f osm_pf_stereo::find_wt_point_s(pcl::PointXYZRGB point)
     // std::cout<<"\n Distance:"<<distance<<std::endl;
     if(distance>0.0)
     {
-        wt = weightfunction(distance,r_w,intensity);
+        wt = weightfunction(distance,f(road_width),intensity);
         if(intensity > 127)
         {
             // std::cout<<"\n Point is a road point, intensity="<<intensity<<std::endl;
@@ -1226,9 +1226,11 @@ osm_pf_stereo::f osm_pf_stereo::find_wt_s(pose xbar,pcl::PointCloud<pcl::PointXY
     {
         weight = 0.0;
     }
-    
+ 
+
     for(int i=0;i<pcl_cloud_map_frame.points.size();i++)
     {
+        
         pcl::PointXYZRGB p = pcl_cloud_map_frame.points[i];
         w = find_wt_point_s(p);
         // std::cout<<"\nGot weight="<<w;
@@ -1243,6 +1245,7 @@ osm_pf_stereo::f osm_pf_stereo::find_wt_s(pose xbar,pcl::PointCloud<pcl::PointXY
 
         
     }
+
 
     // std::cout<<"\nWeight calculated at curent step: "<<weight<<std::endl;
 
@@ -1287,36 +1290,35 @@ pcl::PointCloud<pcl::PointXYZRGB>::Ptr osm_pf_stereo::downsize_s(pcl::PointCloud
 std::vector<osm_pf_stereo::f> osm_pf_stereo::find_Wt_s(std::vector<pose> Xtbar,sensor_msgs::PointCloud2 p_cloud)
 {
     // Preprocess PointCloud
-    auto start = std::chrono::high_resolution_clock::now();
+    // auto start = std::chrono::high_resolution_clock::now();
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr p_cloud_ptr= drop_zeros_s(p_cloud);
-    auto stop = std::chrono::high_resolution_clock::now();
+    // auto stop = std::chrono::high_resolution_clock::now();
 
-    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop-start);
-    std::cout<<"\n Dropping zeros took :"<< duration.count() << " microseconds ";
+    // auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop-start);
+    // std::cout<<"\n Dropping zeros took :"<< duration.count() << " microseconds ";
 
 
-    start = std::chrono::high_resolution_clock::now();
+    // start = std::chrono::high_resolution_clock::now();
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr p_cloud_filtered = downsize_s(p_cloud_ptr);
-    stop = std::chrono::high_resolution_clock::now();
-    duration = std::chrono::duration_cast<std::chrono::microseconds>(stop-start);
-    std::cout<<"\n Downsampling took :"<< duration.count() << " microseconds ";
+    // stop = std::chrono::high_resolution_clock::now();
+    // duration = std::chrono::duration_cast<std::chrono::microseconds>(stop-start);
+    // std::cout<<"\n Downsampling took :"<< duration.count() << " microseconds ";
 
 
 
     // std::cout<<"\nOutcloud size in function after  downsampling: "<<p_cloud_filtered->points.size()<<std::endl;
     // 
-    std::vector<f> weights;
-    f weight;
-    start = std::chrono::high_resolution_clock::now();
-    for(pose p: Xtbar)
-    {
-        weight=find_wt_s(p,p_cloud_filtered);
-        weights.push_back(weight);
-    }
-    stop = std::chrono::high_resolution_clock::now();
+    std::vector<f> weights(Xtbar.size());
 
-    duration = std::chrono::duration_cast<std::chrono::microseconds>(stop-start);
-    std::cout<<"\n Total weighting took :"<< duration.count() << " microseconds ";
+    // start = std::chrono::high_resolution_clock::now();
+    for(int i=0;i<Xtbar.size();i++)
+    {
+        weights[i]=find_wt_s(Xtbar[i],p_cloud_filtered);
+    }
+    // stop = std::chrono::high_resolution_clock::now();
+
+    // duration = std::chrono::duration_cast<std::chrono::microseconds>(stop-start);
+    // std::cout<<"\n Total weighting took :"<< duration.count() << " microseconds ";
 
 
     return weights;
