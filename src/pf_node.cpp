@@ -54,6 +54,11 @@ int main(int argc,char** argv)
         // Run Particle Filter
 
     }
+    else if(sensing_mode=="monocular")
+    {
+        pf_ptr_s.reset(new osmpf::osm_pf_stereo (path,min_x,min_y,max_x,max_y,res_x,res_y,num_particles,seed_x,seed_y,true));
+        pf_ptr_s->run();
+    }
     else
     {
 

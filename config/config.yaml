@@ -96,3 +96,10 @@ weight_function : gaussian
 adaptive_mode : true
 min_particles : 10000
 std_lim : 400.0
+
+
+# Parameters for Monocular mode:
+scale_x : 15
+scale_y : 15
+img_size_x : 64
+img_size_y : 64

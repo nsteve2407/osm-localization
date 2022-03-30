@@ -5,6 +5,7 @@
 #include<message_filters/sync_policies/approximate_time.h>
 #include<nav_msgs/Odometry.h>
 #include<sensor_msgs/PointCloud2.h>
+#include<sensor_msgs/Image.h>
 #include <xtensor.hpp>
 #include <xtensor/xnpy.hpp>
 #include<string>
@@ -15,6 +16,7 @@
 #include <pcl/filters/passthrough.h>
 #include <pcl/point_cloud.h>
 #include<std_msgs/Header.h>
+#include<Eigen/Dense>
 
 namespace osmpf
 {
@@ -44,7 +46,7 @@ namespace osmpf
         float odom_cov_lin;
         float odom_cov_angular;
         int count,resampling_count;
-        bool use_pi_weighting, use_pi_resampling,project_cloud,use_dynamic_resampling,estimate_gps_error, adaptive_mode;
+        bool use_pi_weighting, use_pi_resampling,project_cloud,use_dynamic_resampling,estimate_gps_error, adaptive_mode, mono_mode;
         f w_sum_sq;
         int road_width,queue_size,sync_queue_size;
         f pi_gain;
@@ -84,10 +86,15 @@ namespace osmpf
         std::shared_ptr<std::normal_distribution<f>> dist_ptr;
         std::normal_distribution<f> dist_x,dist_theta;
         // std::normal_distribution<f> dist_x;
+        // Attributes for Monocular mode
+        int image_c_x, image_c_y;
+        f img_size_x,img_size_y,scale_x,scale_y;
+        Eigen::ArrayXXf L_x,L_y;
+
 
         public:
         // Methods
-        osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_res_x,f map_res_y,int particles=100,f seed_x=0,f seed_y=0);
+        osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_res_x,f map_res_y,int particles=100,f seed_x=0,f seed_y=0,bool mono=false);
         void init_particles();
         pose find_xbar(pose x_tminus1,f dx,f dy, f dtheta);
         std::vector<pose> find_Xbar(std::vector<pose> X_tminus1,nav_msgs::Odometry odom);
@@ -105,13 +112,14 @@ namespace osmpf
         f weightfunction(f distance,f road_width,f intensity);
         void std_dibn();
         void update_num_particles();
+        pcl::PointCloud<pcl::PointXYZI> Image_to_pcd_mapframe(sensor_msgs::Image::ConstPtr& image,f pose_x,f pose_y,f pose_theta);
     };
 
     class osm_pf_stereo: public osm_pf
     {
         public:
         typedef _Float64 f;
-        osm_pf_stereo(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_res_x,f map_res_y,int particles=100,f seed_x=0,f seed_y=0);
+        osm_pf_stereo(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_res_x,f map_res_y,int particles=100,f seed_x=0,f seed_y=0,bool mono=false);
         f find_wt_s(pose xbar,pcl::PointCloud<pcl::PointXYZRGB>::Ptr p_cloud_filtered);
         f find_wt_point_s(pcl::PointXYZRGB point);
         std::vector<f> find_Wt_s(std::vector<pose> Xtbar,sensor_msgs::PointCloud2 p_cloud);

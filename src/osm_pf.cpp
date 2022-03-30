@@ -154,12 +154,12 @@ std::vector<T> sum_sum_sq(const std::vector<T>& a, const std::vector<T>& b,osm_p
 }
 
 
-osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_res_x,f map_res_y,int particles,f seed_x,f seed_y)
+osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_res_x,f map_res_y,int particles,f seed_x,f seed_y,bool mono)
 {
     num_particles = particles;
     max_particles = particles;
 
-
+    mono_mode = mono;
 
     
     
@@ -192,7 +192,10 @@ osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_r
     nh.getParam("/osm_particle_filter/weight_function",weight_function);
     nh.getParam("/osm_particle_filter/min_particles",min_particles);
     nh.getParam("/osm_particle_filter/std_lim",std_lim);
-    nh.getParam("/osm_particle_filter/adaptive_mode",adaptive_mode);
+    nh.getParam("/osm_particle_filter/img_size_x",img_size_x);
+    nh.getParam("/osm_particle_filter/img_size_y",img_size_y);
+    nh.getParam("/osm_particle_filter/scale_x",scale_x);
+    nh.getParam("/osm_particle_filter/scale_y",scale_y);
 
     
     m = (max_particles-min_particles)/std_lim;
@@ -262,7 +265,27 @@ osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_r
     std::cout<<"\n Weight sum sq initialized to: "<< w_sum_sq;
     std::cout<<"\n Neff initialized to: "<< 1/w_sum_sq;
     ROS_INFO("\nParticles initialized");
-    
+
+    if(mono_mode)
+    {
+        image_c_x = img_size_x/2;
+        image_c_y = img_size_y;
+
+        Eigen::ArrayXXf P_x= Eigen::ArrayXXf::Zero(img_size_x,img_size_y);
+        Eigen::ArrayXXf P_y= Eigen::ArrayXXf::Zero(img_size_x,img_size_y);
+        Eigen::ArrayXXf C_x= Eigen::ArrayXXf::Zero(img_size_x,img_size_y);
+        Eigen::ArrayXXf C_y= Eigen::ArrayXXf::Zero(img_size_x,img_size_y);
+
+        Eigen::VectorXf w = Eigen::VectorXf::LinSpaced(img_size_x,0,img_size_x-1);
+        Eigen::VectorXf h = Eigen::VectorXf::LinSpaced(img_size_y,0,img_size_y-1);
+        
+        P_x.colwise() += h;
+        P_y.rowwise() += w;
+        C_x += image_c_x;
+        C_y += image_c_y;
+        L_x = (P_x-C_x)*scale_x;
+        L_y = (C_y-P_y)*scale_y;
+    }
 }
 
 void osm_pf::setSeed(f x, f y)
@@ -924,8 +947,23 @@ void osm_pf::run()
     sync->registerCallback(boost::bind(&osm_pf::callback,this,_1,_2));
 }
 
+pcl::PointCloud<pcl::PointXYZI> osm_pf::Image_to_pcd_mapframe(sensor_msgs::Image::ConstPtr& image,f pose_x,f pose_y,f pose_theta)
+{
+    pcl::PointCloud<pcl::PointXYZI> op_cloud;
+    pcl::PointXYZI point;
 
-osm_pf_stereo::osm_pf_stereo(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_res_x,f map_res_y,int particles,f seed_x,f seed_y):  osm_pf{path_to_d_mat,min_x,min_y,Max_x,Max_y,map_res_x,map_res_y,particles,seed_x,seed_y}
+    for(int i;i<image->height;i++)
+    {
+        for(int j;j<image->width;j++)
+        {
+            
+        }
+    }
+
+    return op_cloud;
+}
+
+osm_pf_stereo::osm_pf_stereo(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_res_x,f map_res_y,int particles,f seed_x,f seed_y,bool mono):  osm_pf{path_to_d_mat,min_x,min_y,Max_x,Max_y,map_res_x,map_res_y,particles,seed_x,seed_y,mono}
 {
 }
 
