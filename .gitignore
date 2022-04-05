@@ -30,14 +30,3 @@
 *.exe
 *.out
 *.app
-
-*.ipynb
-*.eps
-*.svg
-*.json
-*.sh
-*.cmake
-*.bash
-*.make
-build/
-*.csv

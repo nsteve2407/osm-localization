@@ -13,8 +13,10 @@
 #include<algorithm>
 #include<pcl/filters/voxel_grid.h>
 #include <functional>
-#include"UTM.h"
 #include<chrono>
+#include<cv_bridge/cv_bridge.h>
+
+
 using namespace osmpf;
 
 osm_pf::f mean(std::vector<osm_pf::f> Wt)
@@ -216,9 +218,20 @@ osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_r
     pf_avg_pub = nh.advertise<geometry_msgs::PoseStamped>("osm_average_pose_estimate",100);
     // pf_pose = nh.advertise<geometry_msgs::Pose>("osm_weighted_pose",100);
     odom_sub.subscribe(nh,"/vehicle/odometry",queue_size);
-    pc_sub.subscribe(nh,"/road_points",queue_size);
+
+    if(mono_mode)
+    {
+        img_sub.subscribe(nh,"/top_view_image",queue_size);
+        sync_mono.reset(new Sync_mono(sync_policy_mono(sync_queue_size),odom_sub,img_sub));
+
+    }
+    else
+    {
+        pc_sub.subscribe(nh,"/road_points",queue_size);
     // pc_sub.subscribe(nh,"/road_points",100);
-    sync.reset(new Sync(sync_policy(sync_queue_size),odom_sub,pc_sub)) ;
+        sync.reset(new Sync(sync_policy(sync_queue_size),odom_sub,pc_sub)) ;
+    }
+
 
 
     // Xt = std::make_shared<std::vector<pose>>();
@@ -271,20 +284,22 @@ osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_r
         image_c_x = img_size_x/2;
         image_c_y = img_size_y;
 
-        Eigen::ArrayXXf P_x= Eigen::ArrayXXf::Zero(img_size_x,img_size_y);
-        Eigen::ArrayXXf P_y= Eigen::ArrayXXf::Zero(img_size_x,img_size_y);
-        Eigen::ArrayXXf C_x= Eigen::ArrayXXf::Zero(img_size_x,img_size_y);
-        Eigen::ArrayXXf C_y= Eigen::ArrayXXf::Zero(img_size_x,img_size_y);
+        Eigen::MatrixXf P_x= Eigen::MatrixXf::Zero(img_size_x,img_size_y);
+        Eigen::MatrixXf P_y= Eigen::MatrixXf::Zero(img_size_x,img_size_y);
+        Eigen::MatrixXf C_x= Eigen::MatrixXf::Constant(img_size_x,img_size_y,image_c_x);
+        Eigen::MatrixXf C_y= Eigen::MatrixXf::Constant(img_size_x,img_size_y,image_c_y);
 
-        Eigen::VectorXf w = Eigen::VectorXf::LinSpaced(img_size_x,0,img_size_x-1);
-        Eigen::VectorXf h = Eigen::VectorXf::LinSpaced(img_size_y,0,img_size_y-1);
+        Eigen::RowVectorXf w = Eigen::RowVectorXf::LinSpaced(img_size_y,0,img_size_y-1);
+        Eigen::VectorXf h = Eigen::VectorXf::LinSpaced(img_size_x,0,img_size_x-1);
         
         P_x.colwise() += h;
         P_y.rowwise() += w;
-        C_x += image_c_x;
-        C_y += image_c_y;
+        // C_x += image_c_x;
+        // C_y += image_c_y;
         L_x = (P_x-C_x)*scale_x;
         L_y = (C_y-P_y)*scale_y;
+
+        ROS_INFO("\nImage Matrices initialized");
     }
 }
 
@@ -391,7 +406,7 @@ osm_pf::f osm_pf::weightfunction(f distance,f road_width,f intensity)
     if(weight_function=="gaussian")
     {
 
-        return (1/(road_width*sqrt(2*pi)))*exp(-1*((std::pow(distance,2))/(2*std::pow(road_width,2))));
+        return (1/(road_width*sqrt(2*3.14)))*exp(-1*((std::pow(distance,2))/(2*std::pow(road_width,2))));
 
     }
     else if(weight_function=="maplite")
@@ -942,26 +957,206 @@ void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs:
 
 
 
-void osm_pf::run()
+pcl::PointCloud<pcl::PointXYZI>::Ptr osm_pf::Image_to_pcd_particleframe(sensor_msgs::Image::ConstPtr& image,f pose_x,f pose_y,f pose_theta)
 {
-    sync->registerCallback(boost::bind(&osm_pf::callback,this,_1,_2));
-}
-
-pcl::PointCloud<pcl::PointXYZI> osm_pf::Image_to_pcd_mapframe(sensor_msgs::Image::ConstPtr& image,f pose_x,f pose_y,f pose_theta)
-{
-    pcl::PointCloud<pcl::PointXYZI> op_cloud;
+    pcl::PointCloud<pcl::PointXYZI>::Ptr op_cloud;
     pcl::PointXYZI point;
 
-    for(int i;i<image->height;i++)
+    // Eigen::ArrayXXf X_map_frame = L_x*sin(pose_theta)+L_y*cos(pose_theta)+pose_x;
+    // Eigen::ArrayXXf Y_map_frame = L_y*sin(pose_theta)-L_x*cos(pose_theta)+pose_y;
+    Eigen::ArrayXXf X_map_frame = L_x;
+    Eigen::ArrayXXf Y_map_frame = L_y;
+
+    cv_bridge::CvImagePtr img_ptr = cv_bridge::toCvCopy(image,"CV_8UC3");
+
+    for(int i=0;i<image->height;i++)
     {
-        for(int j;j<image->width;j++)
+        for(int j=0;j<image->width;j++)
         {
+            point.x = X_map_frame(i,j);
+            point.y = Y_map_frame(i,j);
+            point.z = 0.0;
+            point.intensity = img_ptr->image.at<cv::Vec3b>(i,j)(1);
+            op_cloud->points.push_back(point);
+        }
+    }
+
+
+    return op_cloud;
+}
+
+std::vector<osm_pf::f> osm_pf::find_Wt(std::vector<pose> Xtbar,sensor_msgs::Image::ConstPtr img)
+{
+    pcl::PointCloud<pcl::PointXYZI>::Ptr img_cloud = Image_to_pcd_particleframe(img,0.0,0.0,0.0);
+    // Preprocess PointCloud
+    // auto start = std::chrono::high_resolution_clock::now();
+
+
+    // pcl::PointCloud<pcl::PointXYZI>::Ptr p_cloud_ptr= drop_zeros(p_cloud);
+    // auto stop = std::chrono::high_resolution_clock::now();
+
+    // auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop-start);
+    // std::cout<<"\n Dropping zeros took :"<< duration.count() << " microseconds ";
+
+
+    // start = std::chrono::high_resolution_clock::now();
+    pcl::PointCloud<pcl::PointXYZI>::Ptr p_cloud_filtered = downsize(img_cloud);
+    // stop = std::chrono::high_resolution_clock::now();
+    // duration = std::chrono::duration_cast<std::chrono::microseconds>(stop-start);
+    // std::cout<<"\n Downsampling took :"<< duration.count() << " microseconds ";
+
+
+
+    // std::cout<<"\nOutcloud size in function after  downsampling: "<<p_cloud_filtered->points.size()<<std::endl;
+    // 
+    std::vector<f> weights;
+    f weight;
+    for(pose p: Xtbar)
+    {
+        weight=find_wt(p,p_cloud_filtered);
+        weights.push_back(weight);
+    }
+
+    return weights;
+}
+
+void osm_pf::callback_mono(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs::ImageConstPtr& z_ptr)
+{
+    nav_msgs::Odometry u = *u_ptr;
+    
+
+    std::vector<pose> Xbar = find_Xbar(Xt,u);
+
+    std::vector<f> Wt_est  = find_Wt(Xbar,z_ptr);
+    // std::cout<<"\n Initial Weights calculated \n";
+
+    if(use_dynamic_resampling)
+    {
+        f n_eff = (1/w_sum_sq);
+        std::cout<<"\n Weight sum sq: "<< w_sum_sq;
+        std::cout<<"\n Number of effective particles: "<< n_eff;
+        if(n_eff < ((3*static_cast<f>(num_particles))/4) || count>20)
+        {
+            std::cout<<"\n -------------- Sampling Weights----- "<<std::endl;
+            std::vector<pose> X_t_est = sample_xt(Xbar,Wt_est);
+            Xt = X_t_est;
+            Wt = Wt_est;
+            // std::cout<<"\nWeights: "<<std::endl;
+            // for(auto x : Wt)
+            // {
+            //     std::cout<<" "<<x;
+            // }
+            count = 0;
+
+            publish_msg(X_t_est,Wt_est,u.header);
+            w_sum_sq = 1/(3*static_cast<f>(num_particles));
+            std::cout<<"\n Weight sum sq: "<< w_sum_sq;
+
+        }
+        else
+        {
+            std::cout<<"\n -------------- Not Sampling Weights----- "<<std::endl;
+            Xt = Xbar;
+            w_sum_sq = 0.0;
+
+            
+            Wt = multiply_sum_sq(Wt, Wt_est,w_sum_sq);
+            std::cout<<"\n Weight sum sq: "<< w_sum_sq;
+            count += 0;
+
+            
+            // if(w_sum_sq == 0.0)
+            // {
+            //     std::cout<<"\n Resetting Weights due to convergence to zero "<<std::endl;
+            //     w_sum_sq = 1/num_particles;
+            //     Wt  = std::vector<f>(num_particles,1.0);
+
+            // }
+
+
+            // std::cout<<"\nWeights: "<<std::endl;
+            // for(auto x : Wt)
+            // {
+            //     std::cout<<" "<<x;
+            // }
+
+
+            publish_msg(Xt,Wt,u.header);
+            count++;
+
+        }
+
+
+    }
+    else
+    {
+        if (count == resampling_count)
+        {
+            std_dibn();
+            std::cout<<"Number of particles: "<<num_particles<<std::endl;
+            if(adaptive_mode)
+            {
+                update_num_particles();
+            }
+            std::vector<pose> X_t_est = sample_xt(Xbar,Wt_est);
+            Xt = X_t_est;
+            Wt = Wt_est;
+
+            // std::cout<<"\nWeights: "<<std::endl;
+            // for(auto x : Wt)
+            // {
+            //     std::cout<<" "<<x;
+            // }
+            count = 0;
+
+            publish_msg(Xt,Wt,u.header);
+            
+            
+        }
+
+        else
+        {
+            // avg_wt = mean(Wt_est);
+            // std::cout<<"Average percentage:"<<avg_wt<<std::endl;
+            Xt = Xbar;
+            if (use_pi_resampling)
+            {
+                Wt = Wt * Wt_est;
+            }
+            else
+            {
+            Wt = Wt + Wt_est;
+            }
+
+
+            // std::cout<<"\nWeights: "<<std::endl;
+            // for(auto x : Wt)
+            // {
+            //     std::cout<<" "<<x;
+            // }
+            publish_msg(Xt,Wt,u.header);
+            count++;
+
             
         }
     }
 
-    return op_cloud;
 }
+
+
+
+void osm_pf::run()
+{
+    if(mono_mode)
+    {
+        sync_mono->registerCallback(boost::bind(&osm_pf::callback_mono,this,_1,_2));
+    }
+    else
+    {
+        sync->registerCallback(boost::bind(&osm_pf::callback,this,_1,_2));
+    }    
+}
+
 
 osm_pf_stereo::osm_pf_stereo(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_res_x,f map_res_y,int particles,f seed_x,f seed_y,bool mono):  osm_pf{path_to_d_mat,min_x,min_y,Max_x,Max_y,map_res_x,map_res_y,particles,seed_x,seed_y,mono}
 {

@@ -21,13 +21,18 @@ find_package(
   xtensor REQUIRED
   PCL REQUIRED
   Boost REQUIRED
-  Eigen3 REQUIRED)
+  OpenCV REQUIRED
+  cv_bridge REQUIRED
+  )
 
+find_package (Eigen3 3.3 REQUIRED NO_MODULE)
 catkin_package(
-#  INCLUDE_DIRS include
-#  LIBRARIES pf_node
-#  CATKIN_DEPENDS geometry_msgs/Vector3 nav_msgs/Odometry roscpp rospy sensor_msgs/PointCloud2
-#  DEPENDS system_lib
+  INCLUDE_DIRS
+  CATKIN_DEPENDS roscpp
+                 sensor_msgs
+                 
+                 cv_bridge
+                 
 )
 
 ###########
@@ -40,22 +45,27 @@ include_directories(
 include
   ${catkin_INCLUDE_DIRS}
   ${PCL_INCLUDE_DIRS}
-
+  ${OpenCV_INCLUDE_DIRS}
 )
 add_definitions(${PCL_DEFINITIONS})
 add_library(osmpf /home/mkz/catkin_ws/src/osm-localization/src/osm_pf.cpp)
-add_library(utmlib /home/mkz/catkin_ws/src/osm-localization/src/utm.cpp)
+# add_library(utmlib /home/mkz/catkin_ws/src/osm-localization/src/utm.cpp)
 
 include_directories(${PCL_INCLUDE_DIRS})
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 
 add_executable(pf_node src/pf_node.cpp)
-target_link_libraries(pf_node osmpf utmlib ${catkin_LIBRARIES} -xc++ 
+target_link_libraries(pf_node osmpf ${catkin_LIBRARIES} -xc++ 
 ${xtensor_LIBRARIES} 
 ${PCL_LIBRARIES}
 ${Boost_LIBRARIES}
-${Eigen3_LIBRARIES})
+${Eigen3_LIBRARIES}
+Eigen3::Eigen
+${cv_bridge_LIBS}
+${OpenCV_INCLUDE_DIRS}
+${OpenCV_LIBS}
+${OpenCV_LIBRARIES})
 
 add_executable(pose_cov src/pose_cov.cpp)
 target_link_libraries(pose_cov ${catkin_LIBRARIES} ${Boost_LIBRARIES})

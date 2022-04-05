@@ -61,9 +61,13 @@ namespace osmpf
         // ros::Publisher pf_pose;
         message_filters::Subscriber<nav_msgs::Odometry> odom_sub;
         message_filters::Subscriber<sensor_msgs::PointCloud2> pc_sub;
+        message_filters::Subscriber<sensor_msgs::Image> img_sub;
         typedef message_filters::sync_policies::ApproximateTime<nav_msgs::Odometry,sensor_msgs::PointCloud2> sync_policy;
+        typedef message_filters::sync_policies::ApproximateTime<nav_msgs::Odometry,sensor_msgs::Image> sync_policy_mono;
         typedef message_filters::Synchronizer<sync_policy> Sync;
+        typedef message_filters::Synchronizer<sync_policy_mono> Sync_mono;
         std::shared_ptr<Sync> sync;
+        std::shared_ptr<Sync_mono> sync_mono;
 
         int num_particles, min_particles, max_particles;
         float m, std_lim;
@@ -101,8 +105,10 @@ namespace osmpf
         f find_wt(pose xbar,pcl::PointCloud<pcl::PointXYZI>::Ptr p_cloud_filtered);
         f find_wt_point(pcl::PointXYZI point);
         std::vector<f> find_Wt(std::vector<pose> Xtbar,sensor_msgs::PointCloud2 p_cloud);
+        std::vector<f> find_Wt(std::vector<pose> Xtbar,sensor_msgs::Image::ConstPtr img);
         std::vector<pose> sample_xt(std::vector<pose> Xbar_t,std::vector<f>& Wt);
         void callback(const nav_msgs::OdometryConstPtr&,const sensor_msgs::PointCloud2ConstPtr&);
+        void callback_mono(const nav_msgs::OdometryConstPtr&,const sensor_msgs::ImageConstPtr& img);
         pcl::PointCloud<pcl::PointXYZI>::Ptr drop_zeros(sensor_msgs::PointCloud2 p_cloud);
         void setSeed(f x,f y);
         pcl::PointCloud<pcl::PointXYZI>::Ptr downsize(pcl::PointCloud<pcl::PointXYZI>::Ptr);
@@ -112,7 +118,7 @@ namespace osmpf
         f weightfunction(f distance,f road_width,f intensity);
         void std_dibn();
         void update_num_particles();
-        pcl::PointCloud<pcl::PointXYZI> Image_to_pcd_mapframe(sensor_msgs::Image::ConstPtr& image,f pose_x,f pose_y,f pose_theta);
+        pcl::PointCloud<pcl::PointXYZI>::Ptr Image_to_pcd_particleframe(sensor_msgs::Image::ConstPtr& image,f pose_x,f pose_y,f pose_theta);
     };
 
     class osm_pf_stereo: public osm_pf

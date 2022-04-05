@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+
+<launch>
+
+<!-- <node name="manager" pkg="nodelet" type="nodelet" args="manager __name:=manager"/> -->
+<!-- <node name="depth_proc" pkg="nodelet" type="nodelet" args="load depth_image_proc/point_cloud_xyzrgb manager rgb/camera_info:=/zed/zed_node/left/camera_info rgb/image_rect_color:=/zed/zed_node/left/image_rect_color depth_registered/image_rect:=/zed/zed_node/depth/depth_registered" > -->
+    <!-- <remap from="rgb/camera_info" to="/zed/zed_node/left/camera_info" />
+    <remap from="rgb/image_rect_color" to="/zed/zed_node/left/image_rect_color"/>
+    <remap from="depth_registered/image_rect" to="/zed/zed_node/depth/depth_registered"/> -->
+<!-- </node> -->
+<node name="vehicle_odometry" pkg="osm-localization" type="odometry.py"/>
+<!-- <node name="tf_imu_base" pkg="tf" type="static_transform_publisher" args=" 0 0 0 0 0 0 base_footprint imu_link 100" output="screen" /> -->
+<!-- <include file="$(find robot_localization)/launch/ekf_template.launch" /> -->
+
+<include file="$(find road_seg_deeplabv3)/launch/segment_mono.launch" />
+<!-- <include file="$(find osm_cartography)/launch/viz_osm.launch" /> -->
+    <!-- <arg name="url" value="package://osm_cartography/tests/tamu_map.osm"/> -->
+<!-- </include> -->
+
+
+<!-- <node name="rviz" pkg ="rviz" type="rviz" args="-d $(find osm-localization)/osm_pf.rviz" /> -->
+
+
+
+<arg name="url" default="package://osm_cartography/tests/calibration_raw.osm" />
+
+<!-- <arg name="url" default="package://osm_cartography/tests/tamu_map.osm" /> -->
+
+<!-- start map server -->
+<node pkg="osm_cartography" type="osm_server" name="osm_server" />
+
+<!-- start map visualization -->
+<node pkg="osm_cartography" type="viz_osm" name="viz_osm" >
+<param name="map_url" value="$(arg url)" />
+</node>
+<node name="tf_map" pkg="tf" type="static_transform_publisher" args=" 738912.92 3392799.59 0 0 0 0 1 map local_map 100" />
+
+</launch>

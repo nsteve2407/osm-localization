@@ -17,7 +17,7 @@ class error_log:
         self.pf_e = []
         self.pf_theta = []
         self.count=0
-        self.log =True
+        self.log =False
         self.gps_pub = rp.Publisher("gps_utm",PointStamped,queue_size=100)
         
 
