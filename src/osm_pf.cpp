@@ -221,7 +221,7 @@ osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_r
 
     if(mono_mode)
     {
-        img_sub.subscribe(nh,"/top_view_image",queue_size);
+        img_sub.subscribe(nh,"/road_segment_image_top_view",queue_size);
         sync_mono.reset(new Sync_mono(sync_policy_mono(sync_queue_size),odom_sub,img_sub));
 
     }
@@ -281,8 +281,8 @@ osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_r
 
     if(mono_mode)
     {
-        image_c_x = img_size_x/2;
-        image_c_y = img_size_y;
+        image_c_x = img_size_x;
+        image_c_y = img_size_y/2;
 
         Eigen::MatrixXf P_x= Eigen::MatrixXf::Zero(img_size_x,img_size_y);
         Eigen::MatrixXf P_y= Eigen::MatrixXf::Zero(img_size_x,img_size_y);
@@ -296,7 +296,7 @@ osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_r
         P_y.rowwise() += w;
         // C_x += image_c_x;
         // C_y += image_c_y;
-        L_x = (P_x-C_x)*scale_x;
+        L_x = (C_x-P_x)*scale_x;
         L_y = (C_y-P_y)*scale_y;
 
         ROS_INFO("\nImage Matrices initialized");
@@ -959,7 +959,7 @@ void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs:
 
 pcl::PointCloud<pcl::PointXYZI>::Ptr osm_pf::Image_to_pcd_particleframe(sensor_msgs::Image::ConstPtr& image,f pose_x,f pose_y,f pose_theta)
 {
-    pcl::PointCloud<pcl::PointXYZI>::Ptr op_cloud;
+    pcl::PointCloud<pcl::PointXYZI>::Ptr op_cloud(new pcl::PointCloud<pcl::PointXYZI>);
     pcl::PointXYZI point;
 
     // Eigen::ArrayXXf X_map_frame = L_x*sin(pose_theta)+L_y*cos(pose_theta)+pose_x;
@@ -967,7 +967,7 @@ pcl::PointCloud<pcl::PointXYZI>::Ptr osm_pf::Image_to_pcd_particleframe(sensor_m
     Eigen::ArrayXXf X_map_frame = L_x;
     Eigen::ArrayXXf Y_map_frame = L_y;
 
-    cv_bridge::CvImagePtr img_ptr = cv_bridge::toCvCopy(image,"CV_8UC3");
+    cv_bridge::CvImagePtr img_ptr = cv_bridge::toCvCopy(image,"bgr8");
 
     for(int i=0;i<image->height;i++)
     {
@@ -1016,6 +1016,11 @@ std::vector<osm_pf::f> osm_pf::find_Wt(std::vector<pose> Xtbar,sensor_msgs::Imag
         weight=find_wt(p,p_cloud_filtered);
         weights.push_back(weight);
     }
+    // std::cout<<"Weights:\n";
+    // for (auto x : weights)
+    // {
+    //     std::cout<<x;
+    // }
 
     return weights;
 }

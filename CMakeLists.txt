@@ -11,6 +11,7 @@ set(CMAKE_CXX_STANDARD 14)
 find_package(catkin REQUIRED COMPONENTS
   # geometry_msgs/Vector3
   # nav_msgs/Odometry
+  cv_bridge
   roscpp
   rospy
   pcl_ros
@@ -22,7 +23,7 @@ find_package(
   PCL REQUIRED
   Boost REQUIRED
   OpenCV REQUIRED
-  cv_bridge REQUIRED
+  
   )
 
 find_package (Eigen3 3.3 REQUIRED NO_MODULE)
@@ -31,7 +32,6 @@ catkin_package(
   CATKIN_DEPENDS roscpp
                  sensor_msgs
                  
-                 cv_bridge
                  
 )
 
@@ -62,7 +62,6 @@ ${PCL_LIBRARIES}
 ${Boost_LIBRARIES}
 ${Eigen3_LIBRARIES}
 Eigen3::Eigen
-${cv_bridge_LIBS}
 ${OpenCV_INCLUDE_DIRS}
 ${OpenCV_LIBS}
 ${OpenCV_LIBRARIES})
