@@ -105,7 +105,7 @@ namespace osmpf
         f find_wt(pose xbar,pcl::PointCloud<pcl::PointXYZI>::Ptr p_cloud_filtered);
         f find_wt_point(pcl::PointXYZI point);
         std::vector<f> find_Wt(std::vector<pose> Xtbar,sensor_msgs::PointCloud2 p_cloud);
-        std::vector<f> find_Wt(std::vector<pose> Xtbar,sensor_msgs::Image::ConstPtr img);
+        std::vector<f> find_Wt(std::vector<pose> Xtbar,pcl::PointCloud<pcl::PointXYZI>::Ptr& img_cloud);
         std::vector<pose> sample_xt(std::vector<pose> Xbar_t,std::vector<f>& Wt);
         void callback(const nav_msgs::OdometryConstPtr&,const sensor_msgs::PointCloud2ConstPtr&);
         void callback_mono(const nav_msgs::OdometryConstPtr&,const sensor_msgs::ImageConstPtr& img);
@@ -114,11 +114,12 @@ namespace osmpf
         pcl::PointCloud<pcl::PointXYZI>::Ptr downsize(pcl::PointCloud<pcl::PointXYZI>::Ptr);
         void run();
         std::shared_ptr<pose> weight_pose(std::vector<pose> Poses,std::vector<f> Weights);
-        void publish_msg(std::vector<pose> X,std::vector<f> W,std_msgs::Header h);
+        void publish_msg(std::vector<pose> X,std::vector<f> W,std_msgs::Header h,const sensor_msgs::PointCloud2& ip_cloud);
+        void publish_msg(std::vector<pose> X,std::vector<f> W,std_msgs::Header h,const pcl::PointCloud<pcl::PointXYZI>& ip_cloud);
         f weightfunction(f distance,f road_width,f intensity);
         void std_dibn();
         void update_num_particles();
-        pcl::PointCloud<pcl::PointXYZI>::Ptr Image_to_pcd_particleframe(sensor_msgs::Image::ConstPtr& image,f pose_x,f pose_y,f pose_theta);
+        pcl::PointCloud<pcl::PointXYZI>::Ptr Image_to_pcd_particleframe(const sensor_msgs::Image& image,f pose_x,f pose_y,f pose_theta);
     };
 
     class osm_pf_stereo: public osm_pf
@@ -133,6 +134,7 @@ namespace osmpf
         pcl::PointCloud<pcl::PointXYZRGB>::Ptr downsize_s(pcl::PointCloud<pcl::PointXYZRGB>::Ptr);
         void callback_s(const nav_msgs::OdometryConstPtr&,const sensor_msgs::PointCloud2ConstPtr&);
         void run_s();
+        void publish_msg_stereo(std::vector<pose> X,std::vector<f> W,std_msgs::Header h,const sensor_msgs::PointCloud2& ip_cloud);
 
         
     };

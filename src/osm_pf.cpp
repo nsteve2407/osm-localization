@@ -71,7 +71,8 @@ void osm_pf::update_num_particles()
 {
     if (std_x<std_lim && std_y<std_lim)
     {
-        num_particles = int(m*((std_x+std_y)/2)+min_particles);
+        // num_particles = int(m*((std_x+std_y)/2)+min_particles);
+        num_particles = std::min(int(m*((std_x+std_y)/2)),min_particles);
     }
 
 }
@@ -200,7 +201,7 @@ osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_r
     nh.getParam("/osm_particle_filter/scale_y",scale_y);
 
     
-    m = (max_particles-min_particles)/std_lim;
+    m = (max_particles)/std_lim;
 
     // Initialize Random generators
     gen.reset(new std::default_random_engine);
@@ -751,7 +752,7 @@ std::shared_ptr<pose> osm_pf::weight_pose(std::vector<pose> Poses,std::vector<f>
 
 }
 
-void osm_pf::publish_msg(std::vector<pose> X,std::vector<f> W,std_msgs::Header h)
+void osm_pf::publish_msg(std::vector<pose> X,std::vector<f> W,std_msgs::Header h,const sensor_msgs::PointCloud2& ip_cloud)
 {
     geometry_msgs::PoseArray msg;
     geometry_msgs::PoseArray msg_lat_lon;
@@ -818,6 +819,227 @@ void osm_pf::publish_msg(std::vector<pose> X,std::vector<f> W,std_msgs::Header h
 
         pf_avg_pub.publish(pose_avg);
 
+
+       if(project_cloud && num_particles<min_particles*2)
+        {
+            pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_cloud;
+            pcl::fromROSMsg(ip_cloud,*pcl_cloud);
+
+            Eigen::Matrix4f T;
+            T<<cos(avg_theta), -sin(avg_theta),0, avg_x,
+            sin(avg_theta), cos(avg_theta), 0, avg_x,
+            0, 0, 1,0,
+            0,0,0,1;
+            
+            pcl::PointCloud<pcl::PointXYZI> pcl_cloud_map_frame;
+
+            pcl::transformPointCloud(*pcl_cloud,pcl_cloud_map_frame,T);
+            sensor_msgs::PointCloud2 pc_cloud_msg;
+            pcl::toROSMsg(pcl_cloud_map_frame,pc_cloud_msg);
+            pc_cloud_msg.header.frame_id  = "map";
+            pf_cloud_pub.publish(pc_cloud_msg);
+        }
+
+    }
+    // std::shared_ptr<pose> avg_pose = weight_pose(X,W);
+
+
+
+    msg.header.frame_id = "map";
+    // msg_lat_lon.header.frame_id = "map";
+
+    pf_publisher.publish(msg);    
+    // pf_lat_lon.publish(msg_lat_lon);  
+
+}
+
+void osm_pf::publish_msg(std::vector<pose> X,std::vector<f> W,std_msgs::Header h,const pcl::PointCloud<pcl::PointXYZI>& ip_cloud)
+{
+    geometry_msgs::PoseArray msg;
+    geometry_msgs::PoseArray msg_lat_lon;
+    geometry_msgs::Quaternion q;
+    geometry_msgs::Point position;
+    geometry_msgs::Pose p;
+    geometry_msgs::PoseStamped pose_avg;
+
+    f avg_x,avg_y,avg_theta,weight_sum,wt_norm = 0.0 ;
+    std::vector<f>::iterator max_wt_it = std::max_element(W.begin(),W.end());
+    f max_wt = *max_wt_it+0.00000001;
+    int max_idx = std::distance(W.begin(),max_wt_it);
+
+    float lat,lon;
+    for(int i=0;i<X.size();i++)
+    {
+        q = tf::createQuaternionMsgFromYaw(X[i].theta);
+        position.x = X[i].x;
+        position.y = X[i].y;
+        position.z = 0.0;
+        p.position = position;
+        p.orientation = q;
+        msg.poses.push_back(p); 
+
+        wt_norm = (W[i]+0.00000001)/max_wt;
+        avg_x += wt_norm*X[i].x;
+        avg_y+= wt_norm*X[i].y;
+        avg_theta+= wt_norm*X[i].theta;
+        weight_sum+= wt_norm;
+
+
+        
+        // UTMXYToLatLon(X[i].x,X[i].y,14,false,lat,lon);
+        // position.x = lat;
+        // position.y = lon;
+        // position.z = 0.0;
+        // p.position = position;
+        // p.orientation = q;
+        // msg_lat_lon.poses.push_back(p); 
+    }
+    avg_x = avg_x/weight_sum;
+    avg_y = avg_y/weight_sum;
+    avg_theta = avg_theta/weight_sum;
+
+    if(isnan(avg_x) || isnan(avg_y) || isnan(avg_theta))
+    {
+        // pose_avg.pose.orientation = tf::createQuaternionMsgFromYaw(X[max_idx].theta);
+        // pose_avg.pose.position.x = X[max_idx].x;
+        // pose_avg.pose.position.y = X[max_idx].y;
+        // pose_avg.header.stamp = h.stamp;
+        // pose_avg.header.frame_id = "map";
+
+        // pf_avg_pub.publish(pose_avg);
+
+    }
+
+    else
+    {
+        pose_avg.pose.orientation = tf::createQuaternionMsgFromYaw(avg_theta);
+        pose_avg.pose.position.x = avg_x;
+        pose_avg.pose.position.y = avg_y;
+        pose_avg.header.stamp = h.stamp;
+        pose_avg.header.frame_id = "map";
+
+        pf_avg_pub.publish(pose_avg);
+
+
+       if(project_cloud && num_particles<min_particles*2)
+        {
+
+            Eigen::Matrix4f T;
+            T<<cos(avg_theta), -sin(avg_theta),0, avg_x,
+            sin(avg_theta), cos(avg_theta), 0, avg_y,
+            0, 0, 1,0,
+            0,0,0,1;
+            
+            pcl::PointCloud<pcl::PointXYZI> pcl_cloud_map_frame;
+
+            pcl::transformPointCloud(ip_cloud,pcl_cloud_map_frame,T);
+            sensor_msgs::PointCloud2 pc_cloud_msg;
+            pcl::toROSMsg(pcl_cloud_map_frame,pc_cloud_msg);
+            pc_cloud_msg.header.frame_id  = "map";
+            pf_cloud_pub.publish(pc_cloud_msg);
+        }
+
+    }
+    // std::shared_ptr<pose> avg_pose = weight_pose(X,W);
+
+
+
+    msg.header.frame_id = "map";
+    // msg_lat_lon.header.frame_id = "map";
+
+    pf_publisher.publish(msg);    
+    // pf_lat_lon.publish(msg_lat_lon);  
+
+}
+
+void osm_pf_stereo::publish_msg_stereo(std::vector<pose> X,std::vector<f> W,std_msgs::Header h,const sensor_msgs::PointCloud2& ip_cloud)
+{
+    geometry_msgs::PoseArray msg;
+    geometry_msgs::PoseArray msg_lat_lon;
+    geometry_msgs::Quaternion q;
+    geometry_msgs::Point position;
+    geometry_msgs::Pose p;
+    geometry_msgs::PoseStamped pose_avg;
+
+    f avg_x,avg_y,avg_theta,weight_sum,wt_norm = 0.0 ;
+    std::vector<f>::iterator max_wt_it = std::max_element(W.begin(),W.end());
+    f max_wt = *max_wt_it+0.00000001;
+    int max_idx = std::distance(W.begin(),max_wt_it);
+
+    float lat,lon;
+    for(int i=0;i<X.size();i++)
+    {
+        q = tf::createQuaternionMsgFromYaw(X[i].theta);
+        position.x = X[i].x;
+        position.y = X[i].y;
+        position.z = 0.0;
+        p.position = position;
+        p.orientation = q;
+        msg.poses.push_back(p); 
+
+        wt_norm = (W[i]+0.00000001)/max_wt;
+        avg_x += wt_norm*X[i].x;
+        avg_y+= wt_norm*X[i].y;
+        avg_theta+= wt_norm*X[i].theta;
+        weight_sum+= wt_norm;
+
+
+        
+        // UTMXYToLatLon(X[i].x,X[i].y,14,false,lat,lon);
+        // position.x = lat;
+        // position.y = lon;
+        // position.z = 0.0;
+        // p.position = position;
+        // p.orientation = q;
+        // msg_lat_lon.poses.push_back(p); 
+    }
+    avg_x = avg_x/weight_sum;
+    avg_y = avg_y/weight_sum;
+    avg_theta = avg_theta/weight_sum;
+
+    if(isnan(avg_x) || isnan(avg_y) || isnan(avg_theta))
+    {
+        // pose_avg.pose.orientation = tf::createQuaternionMsgFromYaw(X[max_idx].theta);
+        // pose_avg.pose.position.x = X[max_idx].x;
+        // pose_avg.pose.position.y = X[max_idx].y;
+        // pose_avg.header.stamp = h.stamp;
+        // pose_avg.header.frame_id = "map";
+
+        // pf_avg_pub.publish(pose_avg);
+
+    }
+
+    else
+    {
+        pose_avg.pose.orientation = tf::createQuaternionMsgFromYaw(avg_theta);
+        pose_avg.pose.position.x = avg_x;
+        pose_avg.pose.position.y = avg_y;
+        pose_avg.header.stamp = h.stamp;
+        pose_avg.header.frame_id = "map";
+
+        pf_avg_pub.publish(pose_avg);
+
+
+       if(project_cloud && num_particles<min_particles*2)
+        {
+            pcl::PointCloud<pcl::PointXYZRGB>::Ptr pcl_cloud;
+            pcl::fromROSMsg(ip_cloud,*pcl_cloud);
+
+            Eigen::Matrix4f T;
+            T<<cos(avg_theta), -sin(avg_theta),0, avg_x,
+            sin(avg_theta), cos(avg_theta), 0, avg_x,
+            0, 0, 1,0,
+            0,0,0,1;
+            
+            pcl::PointCloud<pcl::PointXYZRGB> pcl_cloud_map_frame;
+
+            pcl::transformPointCloud(*pcl_cloud,pcl_cloud_map_frame,T);
+            sensor_msgs::PointCloud2 pc_cloud_msg;
+            pcl::toROSMsg(pcl_cloud_map_frame,pc_cloud_msg);
+            pc_cloud_msg.header.frame_id  = "map";
+            pf_cloud_pub.publish(pc_cloud_msg);
+        }
+
     }
     // std::shared_ptr<pose> avg_pose = weight_pose(X,W);
 
@@ -859,7 +1081,7 @@ void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs:
             // }
             count = 0;
 
-            publish_msg(X_t_est,Wt_est,u.header);
+            publish_msg(X_t_est,Wt_est,u.header,z);
             w_sum_sq = 1/(3*static_cast<f>(num_particles));
             std::cout<<"\n Weight sum sq: "<< w_sum_sq;
 
@@ -892,7 +1114,7 @@ void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs:
             // }
 
 
-            publish_msg(Xt,Wt,u.header);
+            publish_msg(Xt,Wt,u.header,z);
             count++;
 
         }
@@ -920,7 +1142,7 @@ void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs:
             // }
             count = 0;
 
-            publish_msg(Xt,Wt,u.header);
+            publish_msg(Xt,Wt,u.header,z);
             
             
         }
@@ -945,7 +1167,7 @@ void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs:
             // {
             //     std::cout<<" "<<x;
             // }
-            publish_msg(Xt,Wt,u.header);
+            publish_msg(Xt,Wt,u.header,z);
             count++;
 
             
@@ -957,7 +1179,7 @@ void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs:
 
 
 
-pcl::PointCloud<pcl::PointXYZI>::Ptr osm_pf::Image_to_pcd_particleframe(sensor_msgs::Image::ConstPtr& image,f pose_x,f pose_y,f pose_theta)
+pcl::PointCloud<pcl::PointXYZI>::Ptr osm_pf::Image_to_pcd_particleframe(const sensor_msgs::Image& image,f pose_x,f pose_y,f pose_theta)
 {
     pcl::PointCloud<pcl::PointXYZI>::Ptr op_cloud(new pcl::PointCloud<pcl::PointXYZI>);
     pcl::PointXYZI point;
@@ -969,9 +1191,9 @@ pcl::PointCloud<pcl::PointXYZI>::Ptr osm_pf::Image_to_pcd_particleframe(sensor_m
 
     cv_bridge::CvImagePtr img_ptr = cv_bridge::toCvCopy(image,"bgr8");
 
-    for(int i=0;i<image->height;i++)
+    for(int i=0;i<image.height;i++)
     {
-        for(int j=0;j<image->width;j++)
+        for(int j=0;j<image.width;j++)
         {
             point.x = X_map_frame(i,j);
             point.y = Y_map_frame(i,j);
@@ -985,9 +1207,9 @@ pcl::PointCloud<pcl::PointXYZI>::Ptr osm_pf::Image_to_pcd_particleframe(sensor_m
     return op_cloud;
 }
 
-std::vector<osm_pf::f> osm_pf::find_Wt(std::vector<pose> Xtbar,sensor_msgs::Image::ConstPtr img)
+std::vector<osm_pf::f> osm_pf::find_Wt(std::vector<pose> Xtbar,pcl::PointCloud<pcl::PointXYZI>::Ptr& img_cloud)
 {
-    pcl::PointCloud<pcl::PointXYZI>::Ptr img_cloud = Image_to_pcd_particleframe(img,0.0,0.0,0.0);
+    
     // Preprocess PointCloud
     // auto start = std::chrono::high_resolution_clock::now();
 
@@ -1028,11 +1250,12 @@ std::vector<osm_pf::f> osm_pf::find_Wt(std::vector<pose> Xtbar,sensor_msgs::Imag
 void osm_pf::callback_mono(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs::ImageConstPtr& z_ptr)
 {
     nav_msgs::Odometry u = *u_ptr;
-    
+    sensor_msgs::Image image = *z_ptr;
+    pcl::PointCloud<pcl::PointXYZI>::Ptr img_cloud = Image_to_pcd_particleframe(image,0.0,0.0,0.0);
 
     std::vector<pose> Xbar = find_Xbar(Xt,u);
 
-    std::vector<f> Wt_est  = find_Wt(Xbar,z_ptr);
+    std::vector<f> Wt_est  = find_Wt(Xbar,img_cloud);
     // std::cout<<"\n Initial Weights calculated \n";
 
     if(use_dynamic_resampling)
@@ -1053,7 +1276,7 @@ void osm_pf::callback_mono(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_
             // }
             count = 0;
 
-            publish_msg(X_t_est,Wt_est,u.header);
+            publish_msg(X_t_est,Wt_est,u.header,*img_cloud);
             w_sum_sq = 1/(3*static_cast<f>(num_particles));
             std::cout<<"\n Weight sum sq: "<< w_sum_sq;
 
@@ -1086,7 +1309,7 @@ void osm_pf::callback_mono(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_
             // }
 
 
-            publish_msg(Xt,Wt,u.header);
+            publish_msg(Xt,Wt,u.header,*img_cloud);
             count++;
 
         }
@@ -1114,7 +1337,7 @@ void osm_pf::callback_mono(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_
             // }
             count = 0;
 
-            publish_msg(Xt,Wt,u.header);
+            publish_msg(Xt,Wt,u.header,*img_cloud);
             
             
         }
@@ -1139,7 +1362,7 @@ void osm_pf::callback_mono(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_
             // {
             //     std::cout<<" "<<x;
             // }
-            publish_msg(Xt,Wt,u.header);
+            publish_msg(Xt,Wt,u.header,*img_cloud);
             count++;
 
             
@@ -1203,7 +1426,7 @@ void osm_pf_stereo::callback_s(const nav_msgs::OdometryConstPtr& u_ptr,const sen
             // }
             count = 0;
 
-            publish_msg(X_t_est,Wt_est,u.header);
+            publish_msg_stereo(X_t_est,Wt_est,u.header,z);
             w_sum_sq = 1/(3*static_cast<f>(num_particles));
             std::cout<<"\n Weight sum sq: "<< w_sum_sq;
 
@@ -1236,7 +1459,7 @@ void osm_pf_stereo::callback_s(const nav_msgs::OdometryConstPtr& u_ptr,const sen
             // }
 
 
-            publish_msg(Xt,Wt,u.header);
+            publish_msg_stereo(Xt,Wt,u.header,z);
             count++;
 
         }
@@ -1264,7 +1487,7 @@ void osm_pf_stereo::callback_s(const nav_msgs::OdometryConstPtr& u_ptr,const sen
             // }
             count = 0;
 
-            publish_msg(Xt,Wt,u.header);
+            publish_msg_stereo(Xt,Wt,u.header,z);
             
             
         }
@@ -1289,7 +1512,7 @@ void osm_pf_stereo::callback_s(const nav_msgs::OdometryConstPtr& u_ptr,const sen
             // {
             //     std::cout<<" "<<x;
             // }
-            publish_msg(Xt,Wt,u.header);
+            publish_msg_stereo(Xt,Wt,u.header,z);
             count++;
             // std_dibn();
             // std::cout<<"Number of particles: "<<num_particles<<std::endl;
