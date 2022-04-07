@@ -67,7 +67,6 @@ namespace osmpf
         typedef message_filters::Synchronizer<sync_policy> Sync;
         typedef message_filters::Synchronizer<sync_policy_mono> Sync_mono;
         std::shared_ptr<Sync> sync;
-        std::shared_ptr<Sync_mono> sync_mono;
 
         int num_particles, min_particles, max_particles;
         float m, std_lim;
@@ -91,9 +90,6 @@ namespace osmpf
         std::normal_distribution<f> dist_x,dist_theta;
         // std::normal_distribution<f> dist_x;
         // Attributes for Monocular mode
-        int image_c_x, image_c_y;
-        f img_size_x,img_size_y,scale_x,scale_y;
-        Eigen::ArrayXXf L_x,L_y;
 
 
         public:
@@ -105,17 +101,14 @@ namespace osmpf
         f find_wt(pose xbar,pcl::PointCloud<pcl::PointXYZI>::Ptr p_cloud_filtered);
         f find_wt_point(pcl::PointXYZI point);
         std::vector<f> find_Wt(std::vector<pose> Xtbar,sensor_msgs::PointCloud2 p_cloud);
-        std::vector<f> find_Wt(std::vector<pose> Xtbar,pcl::PointCloud<pcl::PointXYZI>::Ptr& img_cloud);
         std::vector<pose> sample_xt(std::vector<pose> Xbar_t,std::vector<f>& Wt);
         void callback(const nav_msgs::OdometryConstPtr&,const sensor_msgs::PointCloud2ConstPtr&);
-        void callback_mono(const nav_msgs::OdometryConstPtr&,const sensor_msgs::ImageConstPtr& img);
         pcl::PointCloud<pcl::PointXYZI>::Ptr drop_zeros(sensor_msgs::PointCloud2 p_cloud);
         void setSeed(f x,f y);
         pcl::PointCloud<pcl::PointXYZI>::Ptr downsize(pcl::PointCloud<pcl::PointXYZI>::Ptr);
         void run();
         std::shared_ptr<pose> weight_pose(std::vector<pose> Poses,std::vector<f> Weights);
         void publish_msg(std::vector<pose> X,std::vector<f> W,std_msgs::Header h,const sensor_msgs::PointCloud2& ip_cloud);
-        void publish_msg(std::vector<pose> X,std::vector<f> W,std_msgs::Header h,const pcl::PointCloud<pcl::PointXYZI>& ip_cloud);
         f weightfunction(f distance,f road_width,f intensity);
         void std_dibn();
         void update_num_particles();

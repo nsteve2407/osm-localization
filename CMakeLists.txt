@@ -68,3 +68,14 @@ ${OpenCV_LIBRARIES})
 
 add_executable(pose_cov src/pose_cov.cpp)
 target_link_libraries(pose_cov ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+
+add_executable(img_to_pointcloud src/img_to_pointcloud.cpp)
+target_link_libraries(img_to_pointcloud osmpf ${catkin_LIBRARIES} -xc++ 
+${xtensor_LIBRARIES} 
+${PCL_LIBRARIES}
+${Boost_LIBRARIES}
+${Eigen3_LIBRARIES}
+Eigen3::Eigen
+${OpenCV_INCLUDE_DIRS}
+${OpenCV_LIBS}
+${OpenCV_LIBRARIES})

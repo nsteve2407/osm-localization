@@ -9,16 +9,19 @@
     <remap from="depth_registered/image_rect" to="/zed/zed_node/depth/depth_registered"/> -->
 <!-- </node> -->
 <node name="vehicle_odometry" pkg="osm-localization" type="odometry.py"/>
+
 <!-- <node name="tf_imu_base" pkg="tf" type="static_transform_publisher" args=" 0 0 0 0 0 0 base_footprint imu_link 100" output="screen" /> -->
 <!-- <include file="$(find robot_localization)/launch/ekf_template.launch" /> -->
 
 <include file="$(find road_seg_deeplabv3)/launch/segment_mono.launch" />
-<!-- <include file="$(find osm_cartography)/launch/viz_osm.launch" /> -->
-    <!-- <arg name="url" value="package://osm_cartography/tests/tamu_map.osm"/> -->
-<!-- </include> -->
+
+<node name="osm_particle_filter" pkg="osm-localization" type="pf_node" output="screen" >
+    <rosparam command="load" file="$(find osm-localization)/config/config.yaml" />
 
 
-<!-- <node name="rviz" pkg ="rviz" type="rviz" args="-d $(find osm-localization)/osm_pf.rviz" /> -->
+</node>
+
+<node name="Img_to_PCD" pkg="osm-localization" type="img_to_pointcloud"/>
 
 
 
@@ -34,5 +37,7 @@
 <param name="map_url" value="$(arg url)" />
 </node>
 <node name="tf_map" pkg="tf" type="static_transform_publisher" args=" 738912.92 3392799.59 0 0 0 0 1 map local_map 100" />
+
+
 
 </launch>
