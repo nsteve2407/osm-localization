@@ -74,7 +74,7 @@ init_cov_linear : 200.0
 init_cov_angular : 1.57
 odom_cov_lin : 0.1
 odom_cov_angular : 0.05
-resampling_count : 10
+resampling_count : 7
 
 use_pi_weighting : true
 use_pi_resampling : false
@@ -90,7 +90,7 @@ use_dynamic_resampling : false
 
 estimate_gps_error  : true
 
-weight_function : gaussian
+weight_function : maplite
 
 # Additoinal
 adaptive_mode : false

@@ -1,5 +1,5 @@
 path_to_dmat  : /home/mkz/catkin_ws/src/osm-localization/distance_maps/run1_filtered.npy
-sensing_mode : monocular
+sensing_mode : stereo
 #msc
 # min_x : 753414.1983092
 # max_x : 755946.5593901
@@ -33,12 +33,10 @@ min_x : 737254.704791
 max_x : 748093.029759
 min_y : 3391022.43960
 max_y : 3400671.03915
-# lidar
-seed_x : 743124.69
-seed_y : 3398103.49
+
 # stereo
-# seed_x : 742585.33
-# seed_y : 3397636.54
+seed_x : 742585.33
+seed_y : 3397636.54
 
 # w_osr unseen data
 # min_x : 737628.523519
@@ -70,11 +68,11 @@ map_resolution_y : 1.500093213502397
 # map_resolution_y : 1.4999315408538794
 num_particles : 30000
 down_sample_size : 3.0
-init_cov_linear : 200.0
+init_cov_linear : 100.0
 init_cov_angular : 1.57
-odom_cov_lin : 0.1
-odom_cov_angular : 0.05
-resampling_count : 10
+odom_cov_lin : 0.05
+odom_cov_angular : 0.025
+resampling_count : 7
 
 use_pi_weighting : true
 use_pi_resampling : false

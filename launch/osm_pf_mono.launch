@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 
 <launch>
-
+<arg name="config_file" default="/home/mkz/catkin_ws/src/osm-localization/config/config.yaml" />
 <!-- <node name="manager" pkg="nodelet" type="nodelet" args="manager __name:=manager"/> -->
 <!-- <node name="depth_proc" pkg="nodelet" type="nodelet" args="load depth_image_proc/point_cloud_xyzrgb manager rgb/camera_info:=/zed/zed_node/left/camera_info rgb/image_rect_color:=/zed/zed_node/left/image_rect_color depth_registered/image_rect:=/zed/zed_node/depth/depth_registered" > -->
     <!-- <remap from="rgb/camera_info" to="/zed/zed_node/left/camera_info" />
@@ -16,7 +16,7 @@
 <include file="$(find road_seg_deeplabv3)/launch/segment_mono.launch" />
 
 <node name="osm_particle_filter" pkg="osm-localization" type="pf_node" output="screen" >
-    <rosparam command="load" file="$(find osm-localization)/config/config.yaml" />
+    <rosparam command="load" file="$(arg config_file)" />
 
 
 </node>
@@ -38,6 +38,8 @@
 </node>
 <node name="tf_map" pkg="tf" type="static_transform_publisher" args=" 738912.92 3392799.59 0 0 0 0 1 map local_map 100" />
 
+<node name="logger" pkg="osm-localization" type="error_log.py" />
 
+<node name="bag_play" pkg="rosbag" type="play" args="--clock /home/mkz/bag_files/12-09-21/calibration_raw.bag "/>
 
 </launch>

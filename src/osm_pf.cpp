@@ -71,8 +71,9 @@ void osm_pf::update_num_particles()
 {
     if (std_x<std_lim && std_y<std_lim)
     {
-        // num_particles = int(m*((std_x+std_y)/2)+min_particles);
-        num_particles = std::min(int(m*((std_x+std_y)/2)),min_particles);
+        // std::cout<<"Grad: "<<m*((std_x+std_y)/2)<<std::endl;
+        num_particles = int(m*((std_x+std_y)/2)+min_particles);
+        // num_particles = std::min(int(m*((std_x+std_y)/2)),min_particles);
     }
 
 }
@@ -192,8 +193,9 @@ osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_r
     nh.getParam("/osm_particle_filter/weight_function",weight_function);
     nh.getParam("/osm_particle_filter/min_particles",min_particles);
     nh.getParam("/osm_particle_filter/std_lim",std_lim);
+    nh.getParam("/osm_particle_filter/adaptive_mode",adaptive_mode);
     
-    m = (max_particles)/std_lim;
+    m = (max_particles-min_particles)/std_lim;
 
     // Initialize Random generators
     gen.reset(new std::default_random_engine);
@@ -988,6 +990,7 @@ void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs:
             std::cout<<"Number of particles: "<<num_particles<<std::endl;
             if(adaptive_mode)
             {
+                // std::cout<<"Updateing num particles..\n";
                 update_num_particles();
             }
             std::vector<pose> X_t_est = sample_xt(Xbar,Wt_est);
