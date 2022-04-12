@@ -67,12 +67,12 @@ class error_log:
         wt_fun = str(rp.get_param("/osm_particle_filter/weight_function"))
         mode  = str(rp.get_param("/osm_particle_filter/sensing_mode"))
         particles =  int(rp.get_param("/osm_particle_filter/num_particles"))
-        if particles>500:
+        if particles>80000:
             scale='global'
         else:
             scale='local'
         if self.log:
-            self.df.to_csv('/home/mkz/catkin_ws/src/osm-localization/monocular/seen/local/'+mode+'_s_calib_'+scale+'_'+wt_fun+'.csv')
+            self.df.to_csv('/home/mkz/catkin_ws/src/osm-localization/test_cases/lidar/dynamic/seen/local/'+mode+'_s_calib_'+scale+'_'+wt_fun+'.csv')
             print('\nLog file saved !\nExiting..')
 
 log = error_log()

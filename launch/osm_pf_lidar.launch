@@ -1,0 +1,42 @@
+<?xml version="1.0"?>
+
+<launch>
+
+<include file="$(find osm-localization)/launch/ouster_driver.launch" />
+<arg name="config_file" default="/home/mkz/catkin_ws/src/osm-localization/config/config.yaml" />
+<node name="vehicle_odometry" pkg="osm-localization" type="odometry.py"/>
+<!-- <node name="tf_imu_base" pkg="tf" type="static_transform_publisher" args=" 0 0 0 0 0 0 base_footprint imu_link 100" output="screen" /> -->
+<!-- <include file="$(find robot_localization)/launch/ekf_template.launch" /> -->
+
+<include file="$(find road_seg_deeplabv3)/launch/s-layer.launch" />
+<!-- <include file="$(find osm_cartography)/launch/viz_osm.launch" /> -->
+    <!-- <arg name="url" value="package://osm_cartography/tests/tamu_map.osm"/> -->
+<!-- </include> -->
+
+
+<!-- <node name="rviz" pkg ="rviz" type="rviz" args="-d $(find osm-localization)/osm_pf.rviz" /> -->
+
+<node name="osm_particle_filter" pkg="osm-localization" type="pf_node" output="screen" >
+    <rosparam command="load" file="$(arg config_file)" />
+
+
+</node>
+
+<arg name="url" default="package://osm_cartography/tests/calibration_raw.osm" />
+
+<!-- <arg name="url" default="package://osm_cartography/tests/tamu_map.osm" /> -->
+
+<!-- start map server -->
+<node pkg="osm_cartography" type="osm_server" name="osm_server" />
+
+<!-- start map visualization -->
+<node pkg="osm_cartography" type="viz_osm" name="viz_osm" >
+<param name="map_url" value="$(arg url)" />
+</node>
+<node name="tf_map" pkg="tf" type="static_transform_publisher" args=" 738912.92 3392799.59 0 0 0 0 1 map local_map 100" />
+
+<node name="logger" pkg="osm-localization" type="error_log.py" />
+
+<node name="bag_play" pkg="rosbag" type="play" args="--clock /home/mkz/bag_files/12-09-21/calibration_raw.bag "/>
+
+</launch>

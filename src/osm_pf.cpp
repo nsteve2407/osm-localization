@@ -15,6 +15,7 @@
 #include <functional>
 #include<chrono>
 #include<cv_bridge/cv_bridge.h>
+#include<numeric>
 
 
 using namespace osmpf;
@@ -224,7 +225,7 @@ osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_r
     // Xt = std::make_shared<std::vector<pose>>();
     // Wt = std::make_shared<std::vector<f>>();
     Xt = std::vector<pose>(num_particles);
-    w_sum_sq = 1/(2*static_cast<f>(num_particles));
+    w_sum_sq = 1/(3*static_cast<f>(num_particles));
     if(use_pi_weighting && use_pi_resampling)
     {
         Wt = std::vector<f>(num_particles,1.0);
@@ -720,9 +721,13 @@ void osm_pf::publish_msg(std::vector<pose> X,std::vector<f> W,std_msgs::Header h
     geometry_msgs::Pose p;
     geometry_msgs::PoseStamped pose_avg;
 
-    f avg_x,avg_y,avg_theta,weight_sum,wt_norm = 0.0 ;
+    f avg_x=0.0;
+    f avg_y=0.0;
+    f avg_theta=0.0;
+    f weight_sum=0.0;
+    f wt_norm = 0.0 ;
     std::vector<f>::iterator max_wt_it = std::max_element(W.begin(),W.end());
-    f max_wt = *max_wt_it+0.00000001;
+    f max_wt = *max_wt_it;
     int max_idx = std::distance(W.begin(),max_wt_it);
 
     float lat,lon;
@@ -736,7 +741,8 @@ void osm_pf::publish_msg(std::vector<pose> X,std::vector<f> W,std_msgs::Header h
         p.orientation = q;
         msg.poses.push_back(p); 
 
-        wt_norm = (W[i]+0.00000001)/max_wt;
+        // wt_norm = (W[i]+0.00000001)/max_wt;
+        wt_norm = W[i];
         avg_x += wt_norm*X[i].x;
         avg_y+= wt_norm*X[i].y;
         avg_theta+= wt_norm*X[i].theta;
@@ -926,11 +932,18 @@ void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs:
 
     if(use_dynamic_resampling)
     {
-        f n_eff = (1/w_sum_sq);
+        f n_eff = (1.0/w_sum_sq);
         std::cout<<"\n Weight sum sq: "<< w_sum_sq;
         std::cout<<"\n Number of effective particles: "<< n_eff;
-        if(n_eff < ((3*static_cast<f>(num_particles))/4) || count>20)
+        if(n_eff < (((num_particles))/2) || count>resampling_count)
         {
+            std_dibn();
+            std::cout<<"Number of particles: "<<num_particles<<std::endl;
+            if(adaptive_mode)
+            {
+                // std::cout<<"Updateing num particles..\n";
+                update_num_particles();
+            }
             std::cout<<"\n -------------- Sampling Weights----- "<<std::endl;
             std::vector<pose> X_t_est = sample_xt(Xbar,Wt_est);
             Xt = X_t_est;
@@ -951,12 +964,17 @@ void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs:
         {
             std::cout<<"\n -------------- Not Sampling Weights----- "<<std::endl;
             Xt = Xbar;
-            w_sum_sq = 0.0;
 
-            
-            Wt = multiply_sum_sq(Wt, Wt_est,w_sum_sq);
-            std::cout<<"\n Weight sum sq: "<< w_sum_sq;
-            count += 0;
+            if (use_pi_resampling)
+            {
+                Wt = Wt * Wt_est;
+            }
+            else
+            {
+            Wt = Wt + Wt_est;
+            }
+
+            w_sum_sq = std::inner_product(Wt.begin(),Wt.end(),Wt.begin(),0);
 
             
             // if(w_sum_sq == 0.0)
