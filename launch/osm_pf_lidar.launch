@@ -34,6 +34,8 @@
 <param name="map_url" value="$(arg url)" />
 </node>
 <node name="tf_map" pkg="tf" type="static_transform_publisher" args=" 738912.92 3392799.59 0 0 0 0 1 map local_map 100" />
+<node name="tf_map2" pkg="tf" type="static_transform_publisher" args=" 0 0 0 0 0 0 1 osm_pose_estimate os_sensor 100" />
+
 
 <node name="logger" pkg="osm-localization" type="error_log.py" />
 

@@ -592,13 +592,6 @@ osm_pf::f osm_pf::find_wt(pose xbar,pcl::PointCloud<pcl::PointXYZI>::Ptr p_cloud
 
     pcl::transformPointCloud(*p_cloud_filtered,pcl_cloud_map_frame,T);
 
-    if(project_cloud)
-    {
-        sensor_msgs::PointCloud2 pc_cloud;
-        pcl::toROSMsg(pcl_cloud_map_frame,pc_cloud);
-        pc_cloud.header.frame_id  = "map";
-        pf_cloud_pub.publish(pc_cloud);
-    }
     // std::cout<<"\nCloud Transformed";
     // std::cout<<"\nOutcloud size in function after  transforming: "<<pcl_cloud_map_frame.points.size()<<std::endl;
 
@@ -653,7 +646,7 @@ std::vector<osm_pf::f> osm_pf::find_Wt(std::vector<pose> Xtbar,sensor_msgs::Poin
     }
 
 
-    pcl::PointCloud<pcl::PointXYZI>::Ptr p_cloud_filtered = downsize(p_cloud_ptr);
+    p_cloud_filtered = downsize(p_cloud_ptr);
     std::vector<f> weights;
     f weight;
     for(pose p: Xtbar)
@@ -712,7 +705,7 @@ std::shared_ptr<pose> osm_pf::weight_pose(std::vector<pose> Poses,std::vector<f>
 
 }
 
-void osm_pf::publish_msg(std::vector<pose> X,std::vector<f> W,std_msgs::Header h,const sensor_msgs::PointCloud2& ip_cloud)
+void osm_pf::publish_msg(std::vector<pose> X,std::vector<f> W,std_msgs::Header h)
 {
     geometry_msgs::PoseArray msg;
     geometry_msgs::PoseArray msg_lat_lon;
@@ -720,6 +713,8 @@ void osm_pf::publish_msg(std::vector<pose> X,std::vector<f> W,std_msgs::Header h
     geometry_msgs::Point position;
     geometry_msgs::Pose p;
     geometry_msgs::PoseStamped pose_avg;
+    tf::Transform osm_tf;
+    tf::Quaternion tf_q;
 
     f avg_x=0.0;
     f avg_y=0.0;
@@ -782,32 +777,28 @@ void osm_pf::publish_msg(std::vector<pose> X,std::vector<f> W,std_msgs::Header h
         pose_avg.header.stamp = h.stamp;
         pose_avg.header.frame_id = "map";
 
+
+
         pf_avg_pub.publish(pose_avg);
 
-
-       if(project_cloud && std_x<30.0 && std_y<30.0)
+       if(project_cloud)
         {
-            pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_cloud;
-            pcl::fromROSMsg(ip_cloud,*pcl_cloud);
 
-            Eigen::Matrix4f T;
-            T<<cos(avg_theta), -sin(avg_theta),0, avg_x,
-            sin(avg_theta), cos(avg_theta), 0, avg_x,
-            0, 0, 1,0,
-            0,0,0,1;
-            
-            pcl::PointCloud<pcl::PointXYZI> pcl_cloud_map_frame;
-
-            pcl::transformPointCloud(*pcl_cloud,pcl_cloud_map_frame,T);
-            sensor_msgs::PointCloud2 pc_cloud_msg;
-            pcl::toROSMsg(pcl_cloud_map_frame,pc_cloud_msg);
-            pc_cloud_msg.header.frame_id  = "map";
-            pf_cloud_pub.publish(pc_cloud_msg);
+;
+        sensor_msgs::PointCloud2 pc_cloud_msg;
+        pcl::toROSMsg(*p_cloud_filtered,pc_cloud_msg);
+        pc_cloud_msg.header.frame_id  = "osm_pose_estimate";
+        pc_cloud_msg.header.stamp = h.stamp;
+        pf_cloud_pub.publish(pc_cloud_msg);
         }
+
 
     }
     // std::shared_ptr<pose> avg_pose = weight_pose(X,W);
-
+    osm_tf.setOrigin(tf::Vector3(avg_x,avg_y,0.0));
+    tf_q.setRPY(0.0,0.0,avg_theta);
+    osm_tf.setRotation(tf_q);
+    osm_pose_broadcaster.sendTransform(tf::StampedTransform(osm_tf,ros::Time::now(),"map","osm_pose_estimate"));
 
 
     msg.header.frame_id = "map";
@@ -827,6 +818,9 @@ void osm_pf_stereo::publish_msg_stereo(std::vector<pose> X,std::vector<f> W,std_
     geometry_msgs::Point position;
     geometry_msgs::Pose p;
     geometry_msgs::PoseStamped pose_avg;
+    static tf::TransformBroadcaster br;
+    tf::Transform osm_tf;
+    tf::Quaternion tf_q;
 
     f avg_x,avg_y,avg_theta,weight_sum,wt_norm = 0.0 ;
     std::vector<f>::iterator max_wt_it = std::max_element(W.begin(),W.end());
@@ -884,32 +878,36 @@ void osm_pf_stereo::publish_msg_stereo(std::vector<pose> X,std::vector<f> W,std_
         pose_avg.header.stamp = h.stamp;
         pose_avg.header.frame_id = "map";
 
+
         pf_avg_pub.publish(pose_avg);
 
 
-       if(project_cloud && num_particles<min_particles*2)
-        {
-            pcl::PointCloud<pcl::PointXYZRGB>::Ptr pcl_cloud;
-            pcl::fromROSMsg(ip_cloud,*pcl_cloud);
+    //    if(project_cloud)
+    //     {
+    //         pcl::PointCloud<pcl::PointXYZRGB>::Ptr pcl_cloud;
+    //         pcl::fromROSMsg(ip_cloud,*pcl_cloud);
 
-            Eigen::Matrix4f T;
-            T<<cos(avg_theta), -sin(avg_theta),0, avg_x,
-            sin(avg_theta), cos(avg_theta), 0, avg_x,
-            0, 0, 1,0,
-            0,0,0,1;
+    //         Eigen::Matrix4f T;
+    //         T<<cos(avg_theta), -sin(avg_theta),0, avg_x,
+    //         sin(avg_theta), cos(avg_theta), 0, avg_x,
+    //         0, 0, 1,0,
+    //         0,0,0,1;
             
-            pcl::PointCloud<pcl::PointXYZRGB> pcl_cloud_map_frame;
+    //         pcl::PointCloud<pcl::PointXYZRGB> pcl_cloud_map_frame;
 
-            pcl::transformPointCloud(*pcl_cloud,pcl_cloud_map_frame,T);
-            sensor_msgs::PointCloud2 pc_cloud_msg;
-            pcl::toROSMsg(pcl_cloud_map_frame,pc_cloud_msg);
-            pc_cloud_msg.header.frame_id  = "map";
-            pf_cloud_pub.publish(pc_cloud_msg);
-        }
-
+    //         pcl::transformPointCloud(*pcl_cloud,pcl_cloud_map_frame,T);
+    //         sensor_msgs::PointCloud2 pc_cloud_msg;
+    //         pcl::toROSMsg(pcl_cloud_map_frame,pc_cloud_msg);
+    //         pc_cloud_msg.header.frame_id  = "map";
+    //         pf_cloud_pub.publish(pc_cloud_msg);
+    //     }
     }
     // std::shared_ptr<pose> avg_pose = weight_pose(X,W);
 
+    osm_tf.setOrigin(tf::Vector3(avg_x,avg_y,0.0));
+    tf_q.setRPY(0.0,0.0,avg_theta);
+    osm_tf.setRotation(tf_q);
+    br.sendTransform(tf::StampedTransform(osm_tf,ros::Time::now(),"map","osm_pose_estimate"));
 
 
     msg.header.frame_id = "map";
@@ -933,18 +931,18 @@ void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs:
     if(use_dynamic_resampling)
     {
         f n_eff = (1.0/w_sum_sq);
-        std::cout<<"\n Weight sum sq: "<< w_sum_sq;
-        std::cout<<"\n Number of effective particles: "<< n_eff;
-        if(n_eff < (((num_particles))/2) || count>resampling_count)
+        // std::cout<<"\n Weight sum sq: "<< w_sum_sq;
+        // std::cout<<"\n Number of effective particles: "<< n_eff;
+        if(n_eff < (((num_particles))/10) || count>resampling_count)
         {
             std_dibn();
-            std::cout<<"Number of particles: "<<num_particles<<std::endl;
+            // std::cout<<"Number of particles: "<<num_particles<<std::endl;
             if(adaptive_mode)
             {
                 // std::cout<<"Updateing num particles..\n";
                 update_num_particles();
             }
-            std::cout<<"\n -------------- Sampling Weights----- "<<std::endl;
+            // std::cout<<"\n -------------- Sampling Weights----- "<<std::endl;
             std::vector<pose> X_t_est = sample_xt(Xbar,Wt_est);
             Xt = X_t_est;
             Wt = Wt_est;
@@ -955,14 +953,14 @@ void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs:
             // }
             count = 0;
 
-            publish_msg(X_t_est,Wt_est,u.header,z);
+            publish_msg(X_t_est,Wt_est,u.header);
             w_sum_sq = 1/(3*static_cast<f>(num_particles));
-            std::cout<<"\n Weight sum sq: "<< w_sum_sq;
+            // std::cout<<"\n Weight sum sq: "<< w_sum_sq;
 
         }
         else
         {
-            std::cout<<"\n -------------- Not Sampling Weights----- "<<std::endl;
+            // std::cout<<"\n -------------- Not Sampling Weights----- "<<std::endl;
             Xt = Xbar;
 
             if (use_pi_resampling)
@@ -993,7 +991,7 @@ void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs:
             // }
 
 
-            publish_msg(Xt,Wt,u.header,z);
+            publish_msg(Xt,Wt,u.header);
             count++;
 
         }
@@ -1005,7 +1003,7 @@ void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs:
         if (count == resampling_count)
         {
             std_dibn();
-            std::cout<<"Number of particles: "<<num_particles<<std::endl;
+            // std::cout<<"Number of particles: "<<num_particles<<std::endl;
             if(adaptive_mode)
             {
                 // std::cout<<"Updateing num particles..\n";
@@ -1022,7 +1020,7 @@ void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs:
             // }
             count = 0;
 
-            publish_msg(Xt,Wt,u.header,z);
+            publish_msg(Xt,Wt,u.header);
             
             
         }
@@ -1047,7 +1045,7 @@ void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs:
             // {
             //     std::cout<<" "<<x;
             // }
-            publish_msg(Xt,Wt,u.header,z);
+            publish_msg(Xt,Wt,u.header);
             count++;
 
             
@@ -1089,11 +1087,11 @@ void osm_pf_stereo::callback_s(const nav_msgs::OdometryConstPtr& u_ptr,const sen
     if(use_dynamic_resampling)
     {
         f n_eff = (1/w_sum_sq);
-        std::cout<<"\n Weight sum sq: "<< w_sum_sq;
-        std::cout<<"\n Number of effective particles: "<< n_eff;
-        if(n_eff < ((3*static_cast<f>(num_particles))/4) || count>20)
+        // std::cout<<"\n Weight sum sq: "<< w_sum_sq;
+        // std::cout<<"\n Number of effective particles: "<< n_eff;
+        if(n_eff < ((num_particles)/10) || count>20)
         {
-            std::cout<<"\n -------------- Sampling Weights----- "<<std::endl;
+            // std::cout<<"\n -------------- Sampling Weights----- "<<std::endl;
             std::vector<pose> X_t_est = sample_xt(Xbar,Wt_est);
             Xt = X_t_est;
             Wt = Wt_est;
@@ -1106,18 +1104,18 @@ void osm_pf_stereo::callback_s(const nav_msgs::OdometryConstPtr& u_ptr,const sen
 
             publish_msg_stereo(X_t_est,Wt_est,u.header,z);
             w_sum_sq = 1/(3*static_cast<f>(num_particles));
-            std::cout<<"\n Weight sum sq: "<< w_sum_sq;
+            // std::cout<<"\n Weight sum sq: "<< w_sum_sq;
 
         }
         else
         {
-            std::cout<<"\n -------------- Not Sampling Weights----- "<<std::endl;
+            // std::cout<<"\n -------------- Not Sampling Weights----- "<<std::endl;
             Xt = Xbar;
             w_sum_sq = 0.0;
 
             
             Wt = multiply_sum_sq(Wt, Wt_est,w_sum_sq);
-            std::cout<<"\n Weight sum sq: "<< w_sum_sq;
+            // std::cout<<"\n Weight sum sq: "<< w_sum_sq;
             count += 0;
 
             
@@ -1149,7 +1147,7 @@ void osm_pf_stereo::callback_s(const nav_msgs::OdometryConstPtr& u_ptr,const sen
         if (count == resampling_count)
         {
             std_dibn();
-            std::cout<<"Number of particles: "<<num_particles<<std::endl;
+            // std::cout<<"Number of particles: "<<num_particles<<std::endl;
             if(adaptive_mode)
             {
                 update_num_particles();
@@ -1345,13 +1343,7 @@ osm_pf_stereo::f osm_pf_stereo::find_wt_s(pose xbar,pcl::PointCloud<pcl::PointXY
 
     pcl::transformPointCloud(*p_cloud_filtered,pcl_cloud_map_frame,T);
 
-    if(project_cloud)
-    {
-        sensor_msgs::PointCloud2 pc_cloud;
-        pcl::toROSMsg(pcl_cloud_map_frame,pc_cloud);
-        pc_cloud.header.frame_id  = "map";
-        pf_cloud_pub.publish(pc_cloud);
-    }
+
     // std::cout<<"\nCloud Transformed";
     // std::cout<<"\nOutcloud size in function after  transforming: "<<pcl_cloud_map_frame.points.size()<<std::endl;
 

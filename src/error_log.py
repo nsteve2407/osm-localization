@@ -72,7 +72,7 @@ class error_log:
         else:
             scale='local'
         if self.log:
-            self.df.to_csv('/home/mkz/catkin_ws/src/osm-localization/test_cases/lidar/dynamic/seen/local/'+mode+'_s_calib_'+scale+'_'+wt_fun+'.csv')
+            self.df.to_csv('/home/mkz/catkin_ws/src/osm-localization/test_cases/lidar/dynamic/seen/dynamic'+mode+'_s_calib_'+scale+'_'+wt_fun+'.csv')
             print('\nLog file saved !\nExiting..')
 
 log = error_log()

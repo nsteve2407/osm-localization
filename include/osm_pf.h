@@ -17,6 +17,7 @@
 #include <pcl/point_cloud.h>
 #include<std_msgs/Header.h>
 #include<Eigen/Dense>
+#include<tf/transform_broadcaster.h>
 
 namespace osmpf
 {
@@ -67,6 +68,8 @@ namespace osmpf
         typedef message_filters::Synchronizer<sync_policy> Sync;
         typedef message_filters::Synchronizer<sync_policy_mono> Sync_mono;
         std::shared_ptr<Sync> sync;
+        tf::TransformBroadcaster osm_pose_broadcaster;
+        pcl::PointCloud<pcl::PointXYZI>::Ptr p_cloud_filtered;
 
         int num_particles, min_particles, max_particles;
         float m, std_lim;
@@ -108,7 +111,7 @@ namespace osmpf
         pcl::PointCloud<pcl::PointXYZI>::Ptr downsize(pcl::PointCloud<pcl::PointXYZI>::Ptr);
         void run();
         std::shared_ptr<pose> weight_pose(std::vector<pose> Poses,std::vector<f> Weights);
-        void publish_msg(std::vector<pose> X,std::vector<f> W,std_msgs::Header h,const sensor_msgs::PointCloud2& ip_cloud);
+        void publish_msg(std::vector<pose> X,std::vector<f> W,std_msgs::Header h);
         f weightfunction(f distance,f road_width,f intensity);
         void std_dibn();
         void update_num_particles();

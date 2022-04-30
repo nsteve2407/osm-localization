@@ -84,7 +84,7 @@ void Img_to_cloud::Image_to_pcd_particleframe(const sensor_msgs::ImageConstPtr& 
     sensor_msgs::PointCloud2 msg;
     pcl::toROSMsg(*op_cloud,msg);
     msg.header = image->header;
-    msg.header.frame_id = "map";
+    msg.header.frame_id = "osm_pose_estimate";
     pc_pub.publish(msg);
 
 
