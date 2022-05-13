@@ -16,6 +16,7 @@
 #include<chrono>
 #include<cv_bridge/cv_bridge.h>
 #include<numeric>
+#include<cmath>
 
 
 using namespace osmpf;
@@ -159,7 +160,7 @@ std::vector<T> sum_sum_sq(const std::vector<T>& a, const std::vector<T>& b,osm_p
 }
 
 
-osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_res_x,f map_res_y,int particles,f seed_x,f seed_y,bool mono)
+osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_res_x,f map_res_y,int particles,f seed_x,f seed_y,bool mono,float road_sampling_factor,float nroad_sampling_factor)
 {
     num_particles = particles;
     max_particles = particles;   
@@ -204,6 +205,10 @@ osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_r
     dist_x = *dist_ptr;
     dist_ptr.reset(new std::normal_distribution<f>(osm_pf::f(0.0),odom_cov_angular));
     dist_theta = *dist_ptr;
+    road_clloud_factor = road_sampling_factor; non_road_cloud_factor = nroad_sampling_factor;
+    road_filter.setFilterFieldName("intensity");
+    road_filter.setFilterLimits(127.0,256.0);
+    random_sample.setSeed(std::rand());
     
     // dist_theta.reset(new std::normal_distribution<f>(osm_pf::f(0.0),odom_cov_angular));
     // dist_x.reset(osm_pf::f(0.0),odom_cov_lin);
@@ -579,6 +584,26 @@ pcl::PointCloud<pcl::PointXYZI>::Ptr osm_pf::downsize(pcl::PointCloud<pcl::Point
     return p_cloud_filtered;
 }
 
+void osm_pf::road_non_road_filter(pcl::PointCloud<pcl::PointXYZI>::Ptr incloud,pcl::PointCloud<pcl::PointXYZI>::Ptr road_cloud,pcl::PointCloud<pcl::PointXYZI>::Ptr non_road_cloud)
+{
+     pcl::PointCloud<pcl::PointXYZI>::Ptr road(new pcl::PointCloud<pcl::PointXYZI>);
+    pcl::PointCloud<pcl::PointXYZI>::Ptr nonroad(new pcl::PointCloud<pcl::PointXYZI>);
+    road_filter.setInputCloud(incloud);
+    road_filter.setFilterLimitsNegative(false);
+    road_filter.filter(*road);
+    road_filter.setFilterLimitsNegative(true);
+    road_filter.filter(*nonroad);
+
+    // Sample road and non road points
+    random_sample.setSample(std::min(20,(int)std::lrint(road_clloud_factor*road->points.size())));
+    random_sample.setInputCloud(road);
+    random_sample.filter(*road_cloud);
+
+    random_sample.setSample(std::min(10,(int)std::lrint(road_clloud_factor*road->points.size())));
+    random_sample.setInputCloud(nonroad);
+    random_sample.filter(*non_road_cloud);
+}
+
 osm_pf::f osm_pf::find_wt(pose xbar,pcl::PointCloud<pcl::PointXYZI>::Ptr p_cloud_filtered)
 {
 
@@ -634,6 +659,8 @@ std::vector<osm_pf::f> osm_pf::find_Wt(std::vector<pose> Xtbar,sensor_msgs::Poin
 {
     // Preprocess PointCloud
     pcl::PointCloud<pcl::PointXYZI>::Ptr p_cloud_ptr;
+    pcl::PointCloud<pcl::PointXYZI>::Ptr road_cloud(new pcl::PointCloud<pcl::PointXYZI>);
+    pcl::PointCloud<pcl::PointXYZI>::Ptr nroad_cloud(new pcl::PointCloud<pcl::PointXYZI>);
     if(!mono_mode)
     {
         p_cloud_ptr= drop_zeros(p_cloud);
@@ -645,8 +672,18 @@ std::vector<osm_pf::f> osm_pf::find_Wt(std::vector<pose> Xtbar,sensor_msgs::Poin
 
     }
 
+    road_non_road_filter(p_cloud_ptr,road_cloud,nroad_cloud);
 
-    p_cloud_filtered = downsize(p_cloud_ptr);
+
+
+    // p_cloud_filtered = downsize(p_cloud_ptr);
+    p_cloud_filtered.reset(new pcl::PointCloud<pcl::PointXYZI>);
+
+    *p_cloud_filtered += *road_cloud;
+    *p_cloud_filtered += *nroad_cloud;
+    // std::cout<<"\nRoad cloud cloud has:"<<road_cloud->points.size()<<" points";
+    // std::cout<<"\nNon-road cloud has:"<<nroad_cloud->points.size()<<" points";
+    // std::cout<<"\nFiltered cloud has:"<<p_cloud_filtered->points.size()<<" points";
     std::vector<f> weights;
     f weight;
     for(pose p: Xtbar)
@@ -1056,7 +1093,7 @@ void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs:
 
 
 void osm_pf::run()
-{
+ {
     sync->registerCallback(boost::bind(&osm_pf::callback,this,_1,_2));
 }
 

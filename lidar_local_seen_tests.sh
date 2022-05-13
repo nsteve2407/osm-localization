@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-rosparam set /use_sim_time_true
+rosparam set /use_sim_time true
 
 
 

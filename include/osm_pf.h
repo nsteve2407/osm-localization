@@ -14,6 +14,7 @@
 #include<nav_msgs/Odometry.h>
 #include <pcl/point_types.h>
 #include <pcl/filters/passthrough.h>
+#include<pcl/filters/random_sample.h>
 #include <pcl/point_cloud.h>
 #include<std_msgs/Header.h>
 #include<Eigen/Dense>
@@ -50,6 +51,7 @@ namespace osmpf
         bool use_pi_weighting, use_pi_resampling,project_cloud,use_dynamic_resampling,estimate_gps_error, adaptive_mode, mono_mode;
         f w_sum_sq;
         int road_width,queue_size,sync_queue_size;
+        float road_clloud_factor,non_road_cloud_factor;
         f pi_gain;
         std::string weight_function;
 
@@ -93,11 +95,14 @@ namespace osmpf
         std::normal_distribution<f> dist_x,dist_theta;
         // std::normal_distribution<f> dist_x;
         // Attributes for Monocular mode
-
+        
+        // Filters
+        pcl::PassThrough<pcl::PointXYZI> road_filter;
+        pcl::RandomSample<pcl::PointXYZI> random_sample;
 
         public:
         // Methods
-        osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_res_x,f map_res_y,int particles=100,f seed_x=0,f seed_y=0,bool mono=false);
+        osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_res_x,f map_res_y,int particles=100,f seed_x=0,f seed_y=0,bool mono=false,float road_sampling_factor=0.70,float nroad__sampling_factor=0.2);
         void init_particles();
         pose find_xbar(pose x_tminus1,f dx,f dy, f dtheta);
         std::vector<pose> find_Xbar(std::vector<pose> X_tminus1,nav_msgs::Odometry odom);
@@ -116,6 +121,7 @@ namespace osmpf
         void std_dibn();
         void update_num_particles();
         pcl::PointCloud<pcl::PointXYZI>::Ptr Image_to_pcd_particleframe(const sensor_msgs::Image& image,f pose_x,f pose_y,f pose_theta);
+        void road_non_road_filter(pcl::PointCloud<pcl::PointXYZI>::Ptr incloud,pcl::PointCloud<pcl::PointXYZI>::Ptr road_cloud,pcl::PointCloud<pcl::PointXYZI>::Ptr non_road_cloud);
     };
 
     class osm_pf_stereo: public osm_pf
