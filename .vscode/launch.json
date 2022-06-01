@@ -15,7 +15,7 @@
             "name": "ROS: Launch",
             "type": "ros",
             "request": "launch",
-            "target": "/home/mkz/catkin_ws/src/osm-localization/launch/pf_node.launch"
+            "target": "/home/mkz/catkin_ws/src/osm-localization/launch/lidar_bev.launch"
         },
         {
             "name": "g++ - Build and debug active file",

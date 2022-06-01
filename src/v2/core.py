@@ -1,7 +1,9 @@
+from cmath import atan, pi
 from turtle import width
 import numpy as np
 import rospy
 import ros_numpy
+import pandas as pd
 
 class osm_v2():
     def __init__(self):
@@ -14,7 +16,7 @@ class osm_v2():
         self.sensor_range = rospy.get_param('/osm_particle_filter/sensor_range')
         self.bev_img_width = int(self.sensor_range/self.res_x)
 
-        self.base_map = np.load(path_to_mat)
+        self.base_map = np.squeeze(np.load(path_to_mat),axis=-1)
         self.map_bev = np.where(self.base_map<road_width,1,0)
         # self.map_nodes = np.where(self.base_map<1,1,0)
         self.nodes = np.transpose(np.nonzero(self.base_map<=1))
@@ -42,6 +44,52 @@ class osm_v2():
         
         return bev_image
 
+    def idx2coord(self,idx,idy):
+        return self.origin_y+idy*self.res_y,self.origin_x+idx*self.res_x
 
+    def coord2idx(self,e,n):
+        return int(np.round((n-self.origin_y)/self.res_y))-1,int(np.round((e-self.origin_x)/self.res_x))-1
+
+
+    def SliceAtAngle(self,idx,idy,phi):
+        return 0
+
+    def findRoadOrientation(self):
+        poses = []
+        road_nodes = self.nodes.tolist()
+
+        for i in range(len(road_nodes)):
+
+            if(i!=0 and i<(len(road_nodes)-1)):
+                x1,y1 = road_nodes[i-1]
+                x2,y2 = road_nodes[i+1]
+                x1,y1 = self.idx2coord(x1,y1)
+                x2,y2 = self.idx2coord(x1,y1)
+                angle = np.real(atan((y2-y1)/(x2-x1)))
+                poses.append(road_nodes[i]+[angle])
+                poses.append(road_nodes[i]+[angle+np.pi])               
+            elif (i==0):
+                x1,y1 = road_nodes[i]
+                x2,y2 = road_nodes[i+1]
+                x1,y1 = self.idx2coord(x1,y1)
+                x2,y2 = self.idx2coord(x1,y1)
+                angle =  np.real(atan((y2-y1)/(x2-x1)))
+                poses.append(road_nodes[i]+[angle])
+                poses.append(road_nodes[i]+[angle+np.pi])
+
+            else:
+                x1,y1 = road_nodes[i-1]
+                x2,y2 = road_nodes[i]
+                x1,y1 = self.idx2coord(x1,y1)
+                x2,y2 = self.idx2coord(x1,y1)
+                angle = np.real(atan((y2-y1)/(x2-x1)))
+                poses.append(road_nodes[i]+[angle])
+                poses.append(road_nodes[i]+[angle+np.pi])
+
+
+
+
+        return poses
+    
 
 
