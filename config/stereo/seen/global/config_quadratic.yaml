@@ -1,5 +1,5 @@
 path_to_dmat  : /home/mkz/catkin_ws/src/osm-localization/distance_maps/run1_filtered.npy
-sensing_mode : lidar
+sensing_mode : stereo
 #msc
 # min_x : 753414.1983092
 # max_x : 755946.5593901
@@ -37,8 +37,8 @@ max_y : 3400671.03915
 seed_x : 743124.69
 seed_y : 3398103.49
 # stereo
-# seed_x : 742585.33
-# seed_y : 3397636.54
+seed_x : 742585.33
+seed_y : 3397636.54
 
 # w_osr unseen data
 # min_x : 737628.523519
@@ -68,34 +68,35 @@ map_resolution_y : 1.500093213502397
 #Runtime Parameters w_osr
 # map_resolution_x : 1.6049998607745082
 # map_resolution_y : 1.4999315408538794
-num_particles : 100000
-down_sample_size : 2.0
-init_cov_linear : 800.0
+num_particles : 120000
+down_sample_size : 3.0
+init_cov_linear : 1500.0
 init_cov_angular : 1.57
-odom_cov_lin : 0.1
-odom_cov_angular : 0.05
-resampling_count : 20
+odom_cov_lin : 0.05
+odom_cov_angular : 0.025
+resampling_count : 7
 
 use_pi_weighting : true
 use_pi_resampling : false
 
 road_width : 10.0
 pi_gain : 1.0
-queue_size : 500
+queue_size : 10000
 sync_queue_size : 10
 
-project_cloud : true
+project_cloud : false
 
-use_dynamic_resampling : true
+use_dynamic_resampling : false
 
 estimate_gps_error  : true
 
-weight_function : gaussian
+weight_function : quadratic
 
 # Additoinal
 adaptive_mode : true
-min_particles : 30000
-std_lim : 50.0
+min_particles : 20000
+std_lim : 200.0
+
 
 
 # Parameters for Monocular mode:

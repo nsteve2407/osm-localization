@@ -1,18 +1,14 @@
 <?xml version="1.0"?>
 
 <launch>
-<arg name="config_file" default="/home/mkz/catkin_ws/src/osm-localization/config/stereo/seen/local/config_gaussian.yaml" />
-<node name="manager" pkg="nodelet" type="nodelet" args="manager __name:=manager"/>
-<node name="depth_proc" pkg="nodelet" type="nodelet" args="load depth_image_proc/point_cloud_xyzrgb manager rgb/camera_info:=/zed/zed_node/left/camera_info rgb/image_rect_color:=/zed/zed_node/left/image_rect_color depth_registered/image_rect:=/zed/zed_node/depth/depth_registered" >
-    <!-- <remap from="rgb/camera_info" to="/zed/zed_node/left/camera_info" />
-    <remap from="rgb/image_rect_color" to="/zed/zed_node/left/image_rect_color"/>
-    <remap from="depth_registered/image_rect" to="/zed/zed_node/depth/depth_registered"/> -->
-</node>
+
+<include file="$(find osm-localization)/launch/ouster_driver.launch" />
+<arg name="config_file" default="/home/mkz/catkin_ws/src/osm-localization/config/config.yaml" />
 <node name="vehicle_odometry" pkg="osm-localization" type="odometry.py"/>
 <!-- <node name="tf_imu_base" pkg="tf" type="static_transform_publisher" args=" 0 0 0 0 0 0 base_footprint imu_link 100" output="screen" /> -->
 <!-- <include file="$(find robot_localization)/launch/ekf_template.launch" /> -->
 
-<include file="$(find road_seg_deeplabv3)/launch/segment_stereo.launch" />
+<include file="$(find road_seg_deeplabv3)/launch/s-layer.launch" />
 <!-- <include file="$(find osm_cartography)/launch/viz_osm.launch" /> -->
     <!-- <arg name="url" value="package://osm_cartography/tests/tamu_map.osm"/> -->
 <!-- </include> -->
@@ -38,9 +34,11 @@
 <param name="map_url" value="$(arg url)" />
 </node>
 <node name="tf_map" pkg="tf" type="static_transform_publisher" args=" 738912.92 3392799.59 0 0 0 0 1 map local_map 100" />
+<node name="tf_map2" pkg="tf" type="static_transform_publisher" args=" 0 0 0 0 0 0 1 osm_pose_estimate os_sensor 100" />
+
 
 <node name="logger" pkg="osm-localization" type="error_log.py" />
 
-<node name="bag_play" pkg="rosbag" type="play" args="--clock /home/mkz/bag_files/03-09-22(stereo)/run1_stereo.bag "/>
+<node name="bag_play" pkg="rosbag" type="play" args="--clock /home/mkz/bag_files/12-09-21/calibration_raw.bag "/>
 
 </launch>

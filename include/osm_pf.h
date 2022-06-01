@@ -5,6 +5,7 @@
 #include<message_filters/sync_policies/approximate_time.h>
 #include<nav_msgs/Odometry.h>
 #include<sensor_msgs/PointCloud2.h>
+#include<sensor_msgs/Image.h>
 #include <xtensor.hpp>
 #include <xtensor/xnpy.hpp>
 #include<string>
@@ -13,8 +14,11 @@
 #include<nav_msgs/Odometry.h>
 #include <pcl/point_types.h>
 #include <pcl/filters/passthrough.h>
+#include<pcl/filters/random_sample.h>
 #include <pcl/point_cloud.h>
 #include<std_msgs/Header.h>
+#include<Eigen/Dense>
+#include<tf/transform_broadcaster.h>
 
 namespace osmpf
 {
@@ -44,9 +48,10 @@ namespace osmpf
         float odom_cov_lin;
         float odom_cov_angular;
         int count,resampling_count;
-        bool use_pi_weighting, use_pi_resampling,project_cloud,use_dynamic_resampling,estimate_gps_error, adaptive_mode;
+        bool use_pi_weighting, use_pi_resampling,project_cloud,use_dynamic_resampling,estimate_gps_error, adaptive_mode, mono_mode;
         f w_sum_sq;
         int road_width,queue_size,sync_queue_size;
+        float road_clloud_factor,non_road_cloud_factor;
         f pi_gain;
         std::string weight_function;
 
@@ -59,9 +64,14 @@ namespace osmpf
         // ros::Publisher pf_pose;
         message_filters::Subscriber<nav_msgs::Odometry> odom_sub;
         message_filters::Subscriber<sensor_msgs::PointCloud2> pc_sub;
+        message_filters::Subscriber<sensor_msgs::Image> img_sub;
         typedef message_filters::sync_policies::ApproximateTime<nav_msgs::Odometry,sensor_msgs::PointCloud2> sync_policy;
+        typedef message_filters::sync_policies::ApproximateTime<nav_msgs::Odometry,sensor_msgs::Image> sync_policy_mono;
         typedef message_filters::Synchronizer<sync_policy> Sync;
+        typedef message_filters::Synchronizer<sync_policy_mono> Sync_mono;
         std::shared_ptr<Sync> sync;
+        tf::TransformBroadcaster osm_pose_broadcaster;
+        pcl::PointCloud<pcl::PointXYZI>::Ptr p_cloud_filtered;
 
         int num_particles, min_particles, max_particles;
         float m, std_lim;
@@ -84,10 +94,15 @@ namespace osmpf
         std::shared_ptr<std::normal_distribution<f>> dist_ptr;
         std::normal_distribution<f> dist_x,dist_theta;
         // std::normal_distribution<f> dist_x;
+        // Attributes for Monocular mode
+        
+        // Filters
+        pcl::PassThrough<pcl::PointXYZI> road_filter;
+        pcl::RandomSample<pcl::PointXYZI> random_sample;
 
         public:
         // Methods
-        osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_res_x,f map_res_y,int particles=100,f seed_x=0,f seed_y=0);
+        osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_res_x,f map_res_y,int particles=100,f seed_x=0,f seed_y=0,bool mono=false,float road_sampling_factor=0.70,float nroad__sampling_factor=0.2);
         void init_particles();
         pose find_xbar(pose x_tminus1,f dx,f dy, f dtheta);
         std::vector<pose> find_Xbar(std::vector<pose> X_tminus1,nav_msgs::Odometry odom);
@@ -105,13 +120,15 @@ namespace osmpf
         f weightfunction(f distance,f road_width,f intensity);
         void std_dibn();
         void update_num_particles();
+        pcl::PointCloud<pcl::PointXYZI>::Ptr Image_to_pcd_particleframe(const sensor_msgs::Image& image,f pose_x,f pose_y,f pose_theta);
+        void road_non_road_filter(pcl::PointCloud<pcl::PointXYZI>::Ptr incloud,pcl::PointCloud<pcl::PointXYZI>::Ptr road_cloud,pcl::PointCloud<pcl::PointXYZI>::Ptr non_road_cloud);
     };
 
     class osm_pf_stereo: public osm_pf
     {
         public:
         typedef _Float64 f;
-        osm_pf_stereo(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_res_x,f map_res_y,int particles=100,f seed_x=0,f seed_y=0);
+        osm_pf_stereo(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_res_x,f map_res_y,int particles=100,f seed_x=0,f seed_y=0,bool mono=false);
         f find_wt_s(pose xbar,pcl::PointCloud<pcl::PointXYZRGB>::Ptr p_cloud_filtered);
         f find_wt_point_s(pcl::PointXYZRGB point);
         std::vector<f> find_Wt_s(std::vector<pose> Xtbar,sensor_msgs::PointCloud2 p_cloud);
@@ -119,6 +136,7 @@ namespace osmpf
         pcl::PointCloud<pcl::PointXYZRGB>::Ptr downsize_s(pcl::PointCloud<pcl::PointXYZRGB>::Ptr);
         void callback_s(const nav_msgs::OdometryConstPtr&,const sensor_msgs::PointCloud2ConstPtr&);
         void run_s();
+        void publish_msg_stereo(std::vector<pose> X,std::vector<f> W,std_msgs::Header h,const sensor_msgs::PointCloud2& ip_cloud);
 
         
     };

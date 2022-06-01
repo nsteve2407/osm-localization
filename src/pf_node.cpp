@@ -54,6 +54,11 @@ int main(int argc,char** argv)
         // Run Particle Filter
 
     }
+    else if(sensing_mode=="monocular")
+    {
+        pf_ptr_s.reset(new osmpf::osm_pf_stereo(path,min_x,min_y,max_x,max_y,res_x,res_y,num_particles,seed_x,seed_y,true));
+        pf_ptr_s->run();
+    }
     else
     {
 
@@ -63,33 +68,7 @@ int main(int argc,char** argv)
     
 
     }
-    // if (sensing_mode=="lidar")
-    // {
-    //     pf_ptr->run();
-    // }
-    // else
-    // {
-    //     pf_ptr_s->run();
-    //     pf_ptr.reset();
-    // }
-    
-    // pf_ptr_s->run_s();
-    
-    
-    
 
-    // Arrayed saved in   n,e   /  lat,lon / y,x
-    // int n = 0;
-    // int e = 979;
-
-    // cnpy::NpyArray d_mat = cnpy::npy_load("a.npy");
-    
-    // auto d_grid = xt::load_npy<_Float64>("/home/mkz/catkin_ws/src/osm-localization/distance_maps/d_grid.npy");
-    // // xt::view(d_grid,xt::all(),2);
-    // auto distance = d_grid(e,n);
-    // std::cout<<distance<<std::endl;
-    // auto c= d_grid(0,0)
-    // printf(d_grid(0,0));
 
     while (ros::ok())
     {

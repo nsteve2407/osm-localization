@@ -64,10 +64,15 @@ class error_log:
         self.df['diff_n'] = self.df['diff_n']**2
         self.df['diff_sum'] = self.df['diff_e']+self.df['diff_n']
         self.df['error'] = np.sqrt(self.df['diff_sum'])
-        
-
+        wt_fun = str(rp.get_param("/osm_particle_filter/weight_function"))
+        mode  = str(rp.get_param("/osm_particle_filter/sensing_mode"))
+        particles =  int(rp.get_param("/osm_particle_filter/num_particles"))
+        if particles>80000:
+            scale='global'
+        else:
+            scale='local'
         if self.log:
-            self.df.to_csv('./stereo_s_calib_global_gaussian.csv')
+            self.df.to_csv('/home/mkz/catkin_ws/src/osm-localization/test_cases/lidar/dynamic/seen/dynamic'+mode+'_s_calib_'+scale+'_'+wt_fun+'.csv')
             print('\nLog file saved !\nExiting..')
 
 log = error_log()

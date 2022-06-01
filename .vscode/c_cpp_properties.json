@@ -3,7 +3,7 @@
         {
             "browse": {
                 "databaseFilename": "",
-                "limitSymbolsToIncludedHeaders": true
+                "limitSymbolsToIncludedHeaders": false
             },
             "includePath": [
                 "/home/mkz/catkin_ws/devel/include/**",
@@ -11,7 +11,10 @@
                 "/home/mkz/catkin_ws/src/osm-localization/include/**",
                 "/home/mkz/catkin_ws/src/ouster_example/ouster_ros/include/**",
                 "/home/mkz/catkin_ws/src/robot_localization/include/**",
-                "/usr/include/**"
+                "/usr/include/**",
+                "/usr/include/opencv4/**",
+                "/opt/ros/noetic/include",
+                "/usr/include/pcl-1.10"
             ],
             "name": "ROS",
             "configurationProvider": "ms-vscode.cmake-tools"
