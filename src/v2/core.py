@@ -4,7 +4,7 @@ import numpy as np
 import rospy
 import ros_numpy
 import pandas as pd
-
+from scipy import ndimage
 class osm_v2():
     def __init__(self):
         path_to_mat = rospy.get_param("/osm_particle_filter/path_to_dmat")
@@ -52,7 +52,19 @@ class osm_v2():
 
 
     def SliceAtAngle(self,idx,idy,phi):
-        return 0
+        
+        x_l = idx - int(self.bev_img_width)
+        x_h = idx + int(self.bev_img_width)
+        y_l = idy - int(2*self.bev_img_width)
+        y_h = idy + int(2*self.bev_img_width)
+
+        if x_l>=0 and x_h<self.map_bev.shape[0] and y_l>=0 and y_h<self.map_bev.shape[1]:
+            img = self.map_bev[x_l:x_h,y_l:y_h]
+            img = ndimage.rotate(img,-np.rad2deg(phi),reshape=False)
+            img = img[int(img.shape[0]/2):int(img.shape[0]/2+self.bev_img_width),int(img.shape[1]/2-self.bev_img_width):int(img.shape[1]/2+self.bev_img_width)]
+            return img
+        else:
+            return np.zeros((self.bev_img_width,2*self.bev_img_width),dtype=np.uint8)
 
     def findRoadOrientation(self):
         poses = []
