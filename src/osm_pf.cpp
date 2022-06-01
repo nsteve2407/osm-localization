@@ -595,11 +595,11 @@ void osm_pf::road_non_road_filter(pcl::PointCloud<pcl::PointXYZI>::Ptr incloud,p
     road_filter.filter(*nonroad);
 
     // Sample road and non road points
-    random_sample.setSample(std::min(20,(int)std::lrint(road_clloud_factor*road->points.size())));
+    random_sample.setSample(std::min(40,(int)std::lrint(road_clloud_factor*road->points.size())));
     random_sample.setInputCloud(road);
     random_sample.filter(*road_cloud);
 
-    random_sample.setSample(std::min(10,(int)std::lrint(road_clloud_factor*road->points.size())));
+    random_sample.setSample(std::min(20,(int)std::lrint(road_clloud_factor*road->points.size())));
     random_sample.setInputCloud(nonroad);
     random_sample.filter(*non_road_cloud);
 }
