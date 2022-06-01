@@ -20,23 +20,25 @@ class osm_v2():
         self.nodes = np.transpose(np.nonzero(self.base_map<=1))
 
     def bev_xy2index_lidar(self,x,y):
-        if x>0.0:
-            idx=width/2-int((x/self.res_x))
+        if y>0.0:
+            idy = int(self.bev_img_width-int((y/self.res_y)))
         else:
-            idx=width/2+int(abs(x)/self.res_x)
+            idy = int(self.bev_img_width+int(abs(y)/self.res_y))
         
-        idy = int(y/self.res_y)
-        return idx,idy
+        idx = self.bev_img_width-int(x/self.res_x)
+        return idx-1,idy-1
 
     def pointcloud2grid(self,pc_msg):
         
-        bev_image  = np.zeros((self.bev_img_width,2*self.bev_img_width),dtype=np.int)
-        pc_array = ros_numpy.numpyify(pc_msg)
+        bev_image  = np.zeros((self.bev_img_width,2*self.bev_img_width),dtype=np.uint8)
+        pc_array = ros_numpy.numpify(pc_msg)
         idx = np.transpose(np.nonzero(pc_array['intensity']==255.0))
-        points = pc_array(idx[:,0],idx[:,1])
+        points = pc_array[idx[:,0],idx[:,1]]
 
-        for pt in points:
-            bev_image[self.bev_xy2index_lidar(pt['x'],pt['y'])]=1
+        for i in range(points.shape[0]):
+            ix,iy=self.bev_xy2index_lidar(points[i]['x'],points[i]['y'])
+            if ix<bev_image.shape[0] and iy<bev_image.shape[1] and ix>=0 and iy>=0:
+                bev_image[ix,iy]=1
         
         return bev_image
 
