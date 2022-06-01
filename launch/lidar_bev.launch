@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+
+<launch>
+
+<include file="$(find osm-localization)/launch/ouster_driver.launch" />
+<arg name="config_file" default="/home/mkz/catkin_ws/src/osm-localization/config/v2/config.yaml" />
+
+<include file="$(find road_seg_deeplabv3)/launch/s-layer.launch" />
+
+
+<node name="osm_particle_filter" pkg="osm-localization" type="lidar_bev.py" output="screen" >
+    <rosparam command="load" file="$(arg config_file)" />
+
+
+</node>
+
+
+
+<node name="bag_play" pkg="rosbag" type="play" args="--clock /home/mkz/bag_files/12-09-21/calibration_raw.bag "/>
+
+</launch>
