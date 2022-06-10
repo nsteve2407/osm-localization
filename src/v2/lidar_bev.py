@@ -4,7 +4,7 @@ from core import *
 from sensor_msgs.msg import Image,PointCloud2
 
 
-
+save=True
 
 class bev_pub():
     def __init__(self):
@@ -12,8 +12,10 @@ class bev_pub():
         self.bev_pub = rospy.Publisher('/lidar_bev',Image,queue_size=100)
 
     def cb(self,pc_msg):
-        bev_img_ = self.Core.pointcloud2grid(pc_msg)*255.0
-
+        bev_img_ = self.Core.pointcloud2grid(pc_msg)
+        if save:
+            np.save('/home/mkz/git/osm-parser/test_image_rh.npy',bev_img_)
+        bev_img_ = bev_img_*255.0
         img_msg = ros_numpy.msgify(Image,bev_img_.astype(np.uint8),encoding="mono8")
         img_msg.header.stamp = pc_msg.header.stamp
 

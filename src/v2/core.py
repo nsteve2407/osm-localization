@@ -22,7 +22,8 @@ class osm_v2():
         self.map_bev = np.where(self.base_map<road_width,1,0)
         self.map_nodes = np.where(self.base_map<1,1,0)
         self.nodes = np.transpose(np.nonzero(self.base_map<=1))
-        self.map_view_df=None
+        # self.map_view_df=self.initMap()
+        self.ranges=np.arange(7,15).astype(np.int32)
 
     def bev_xy2index_lidar(self,x,y):
         if y>0.0:
@@ -56,16 +57,26 @@ class osm_v2():
 
     def SliceAtAngle(self,idx,idy,phi,base_map):
         
-        x_l = idx - int(self.bev_img_width)
-        x_h = idx + int(self.bev_img_width)
-        y_l = idy - int(2*self.bev_img_width)
-        y_h = idy + int(2*self.bev_img_width)
+        x_l = idx - int(2*self.bev_img_width)
+        x_h = idx + int(2*self.bev_img_width)
+        y_l = idy - int(4*self.bev_img_width)
+        y_h = idy + int(4*self.bev_img_width)
 
         if x_l>=0 and x_h<self.map_bev.shape[0] and y_l>=0 and y_h<self.map_bev.shape[1]:
             img = base_map[x_l:x_h,y_l:y_h]
             img = ndimage.rotate(img,-np.rad2deg(phi),reshape=False)
             img = img[int(img.shape[0]/2):int(img.shape[0]/2+self.bev_img_width),int(img.shape[1]/2-self.bev_img_width):int(img.shape[1]/2+self.bev_img_width)]
             return img
+        else:
+            return np.zeros((self.bev_img_width,2*self.bev_img_width),dtype=np.uint8)
+
+    def SliceNoRotation(self,idx,idy):
+        x_l = idx - int(self.bev_img_width/2)
+        x_h = x_l + int(self.bev_img_width)
+        y_l = idy - int(self.bev_img_width)
+        y_h = y_l + int(2*self.bev_img_width)
+        if x_l>=0 and x_h<self.map_bev.shape[0] and y_l>=0 and y_h<self.map_bev.shape[1]:
+            return self.map_bev[x_l:x_h,y_l:y_h]
         else:
             return np.zeros((self.bev_img_width,2*self.bev_img_width),dtype=np.uint8)
 
@@ -149,9 +160,9 @@ class osm_v2():
 
     def findRoadOrientation2(self):
         poses = []
-        d_tol=200
+        d_tol=10
         road_nodes = self.nodes.tolist()
-        offset = 2
+        offset = 4
 
         for i in range(len(road_nodes)):
 
@@ -164,10 +175,10 @@ class osm_v2():
             # x2,y2 = self.findNearestOne(ix,iy,self.map_nodes,offset)
             x2,y2 = self.findNearestOne2(ix,iy,d_tol)
             if x2!=-1 and y2!=-1:
-                # angle = np.real(atan((y2-iy)/(x2-ix)))
-                ix,iy = self.idx2coord(ix,iy)
-                x2,y2 = self.idx2coord(x2,y2)
-                angle = atan2((y2-iy),(x2-ix))
+                angle = np.real(atan((y2-iy)/(x2-ix+0.000000001)))
+                # ix,iy = self.idx2coord(ix,iy)
+                # x2,y2 = self.idx2coord(x2,y2)
+                # angle = atan2((y2-iy),(x2-ix))
                 poses.append(road_nodes[i]+[angle])
                 poses.append(road_nodes[i]+[angle+np.pi])
 
@@ -177,19 +188,124 @@ class osm_v2():
         return poses
     
     def initMap(self):
-        poses = self.findRoadOrientation()
+        poses = self.findRoadOrientation2()
         mapviews = []
 
         for pose in poses:
             mapView = self.SliceAtAngle(pose[0],pose[1],pose[2],self.map_bev)
             nodemap = self.SliceAtAngle(pose[0],pose[1],pose[2],self.map_nodes)
-            norm = np.linalg.norm(mapView)
-            if norm**2>=1.0:
-                pose.append(mapView)
-                pose.append(nodemap)             
-                pose.append(norm**2)
+            pixel_count = (np.linalg.norm(mapView))**2
+            if pixel_count>=1.0:
+                # pose.append(mapView)
+                # pose.append(nodemap)             
+                pose.append(pixel_count)
                 mapviews.append(pose)
 
-        self.map_view_df = pd.DataFrame(mapviews,columns=['idx','idy','phi','image','nodemap','norm'])
+        # self.map_view_df = pd.DataFrame(mapviews,columns=['idx','idy','phi','image','nodemap','norm'])
+        self.map_view_df = pd.DataFrame(mapviews,columns=['idx','idy','phi','pixel_count'])
 
+    def initMap_noRotation(self):
+        poses = self.nodes.tolist()
+        mapviews = []
+        for pose in poses:
+            mapView = self.SliceNoRotation(pose[0],pose[1])
+            # nodemap = self.SliceAtAngle(pose[0],pose[1],pose[2],self.map_nodes)
+            pixel_count = (np.linalg.norm(mapView))**2
+            if pixel_count>=1.0:
+                # pose.append(mapView)
+                # pose.append(nodemap)             
+                e,n = self.idx2coord(pose[0],pose[1])
+                pose.append(e)
+                pose.append(n)
+                pose.append(pixel_count)
+                mapviews.append(pose)
+
+        # self.map_view_df = pd.DataFrame(mapviews,columns=['idx','idy','phi','image','nodemap','norm'])
+        self.map_view_df = pd.DataFrame(mapviews,columns=['idx','idy','e','n','pixel_count'])
+
+    def initMapDescriptors(self):
+        poses = self.nodes.tolist()
+        mapviews = []
+        
+        for pose in poses:
+            mapView = self.SliceNoRotation(pose[0],pose[1])
+            Desc  = self.findRoadDescriptor(mapView,self.ranges)
+            D_1d = Desc.sum(axis=-1)
+            pixel_count = (np.linalg.norm(mapView))**2
+            if pixel_count>=1.0:
+                # pose.append(mapView)
+                # pose.append(nodemap)             
+                e,n = self.idx2coord(pose[0],pose[1])
+                pose.append(e)
+                pose.append(n)
+                pose.append(pixel_count)
+                pose.append(Desc)
+                pose.append(D_1d)
+                mapviews.append(pose)
+
+        self.map_view_df = pd.DataFrame(mapviews,columns=['idx','idy','e','n','pixel_count','descriptor2d','descriptor1d'])
+
+    def findGolbaltopX(self,scanImage,X):
+        query_pixel_count = (np.linalg.norm(scanImage))**2
+        self.map_view_df['similarity']=(1-(np.abs(self.map_view_df['pixel_count']-query_pixel_count)/(query_pixel_count))).clip(0.0,None)
+        # self.map_view_df['similarity']=np.abs(self.map_view_df['pixel_count']-query_pixel_count)
+        self.map_view_df.sort_values(by='similarity',inplace=True,ascending=False)
+        # self.map_view_df = self.map_view_df[self.map_view_df['similarity']>=0.65]
+
+        return self.map_view_df.iloc[:X,:]
+        # return self.map_view_df
+
+    def findGolbaltopX_descriptor(self,scanImage,X):
+        query_pixel_count = (np.linalg.norm(scanImage))**2
+        q_dec2d = self.findRoadDescriptor(scanImage,self.ranges)
+        q_dec1d = q_dec2d.sum(axis=-1)
+        self.map_view_df['diff1d']=self.map_view_df.descriptor1d.apply(lambda x:np.linalg.norm(x-q_dec1d))
+        self.map_view_df['diffnorm']=np.abs(self.map_view_df['pixel_count']-query_pixel_count)
+        self.map_view_df['f1'] = 2*(self.map_view_df.diff1d*self.map_view_df.diffnorm)/(self.map_view_df.diff1d+self.map_view_df.diffnorm)
+        self.map_view_df.sort_values(by=['diff1d','diffnorm'],inplace=True,ascending=True)
+        # self.map_view_df = self.map_view_df[self.map_view_df['similarity']>=0.65]
+
+        return self.map_view_df.iloc[:X,:]
+        # return self.map_view_df
+    def findPose(self,scanImage,X,angular_res):
+        top100 = self.findGolbaltopX(scanImage,X)
+        countScanImage = np.linalg.norm(scanImage)**2
+        poses = []
+        for i in range(top100.shape[0]):
+            x = top100.iloc[i,0]
+            y = top100.iloc[i,1]
+            p=[]
+            max_score = 0.0
+            for phi in np.arange(0,360,angular_res):
+                img = self.SliceAtAngle(x,y,np.deg2rad(phi),self.map_bev)
+                px_count = np.linalg.norm(img)**2
+                overlap = np.sum(img*scanImage)/countScanImage
+                similarity = max(0.0,1-np.abs(px_count-countScanImage)/countScanImage)
+                f1score = (5*overlap*similarity)/(overlap+4*similarity)
+                if f1score>max_score:
+                    # similarity = top100.similarity[i]
+                    # f1score = (2*overlap*similarity)/(overlap+similarity)
+                    e,n = self.idx2coord(x,y)
+                    # poses.append([x,y,e,n,np.deg2rad(phi),img,score])
+                    p=[x,y,e,n,np.deg2rad(phi),f1score]
+                    max_score=f1score
+            if len(p)>0:
+                poses.append(p)
+
+        # df = pd.DataFrame([poses],columns=['idx','idy','e','n','phi','mapview','score'])
+        df = pd.DataFrame(poses,columns=['idx','idy','e','n','phi','f1score'])
+        df.sort_values(by='f1score',inplace=True,ascending=False)
+        return df
+    
+    def findIndxAtRange(self,img,R):
+        cx,cy = img.shape[0]/2, img.shape[1]/2
+        f = lambda theta: [int(cx+((R*np.cos(theta))/self.res_x)),int(cy+((R*np.sin(theta))/self.res_y))]
+        indxy = np.array([f(x) for x in np.deg2rad(range(360))])
+
+        d = img[indxy[:,0],indxy[:,1]]
+        return d
+
+    def findRoadDescriptor(self,image,Range_list):
+        d = np.array([self.findIndxAtRange(image,r) for r in Range_list])
+        return d
 

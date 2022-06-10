@@ -1,6 +1,6 @@
 path_to_dmat  : /home/mkz/catkin_ws/src/osm-localization/distance_maps/run1_filtered.npy
-road_width : 10
-sensor_range : 50
+road_width : 8
+sensor_range : 30
 sensing_mode : lidar
 #msc
 # min_x : 753414.1983092
