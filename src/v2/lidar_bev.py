@@ -14,7 +14,7 @@ class bev_pub():
     def cb(self,pc_msg):
         bev_img_ = self.Core.pointcloud2grid(pc_msg)
         if save:
-            np.save('/home/mkz/git/osm-parser/test_image_rh.npy',bev_img_)
+            np.save('/home/mkz/git/osm-parser/test_image_straight.npy',bev_img_)
         bev_img_ = bev_img_*255.0
         img_msg = ros_numpy.msgify(Image,bev_img_.astype(np.uint8),encoding="mono8")
         img_msg.header.stamp = pc_msg.header.stamp

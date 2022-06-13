@@ -1,7 +1,9 @@
 from cmath import atan, pi
 from dis import dis
 from math import atan2
+from mimetypes import guess_all_extensions
 from turtle import width
+from cv2 import getGaussianKernel
 import numpy as np
 import rospy
 import ros_numpy
@@ -23,7 +25,7 @@ class osm_v2():
         self.map_nodes = np.where(self.base_map<1,1,0)
         self.nodes = np.transpose(np.nonzero(self.base_map<=1))
         # self.map_view_df=self.initMap()
-        self.ranges=np.arange(7,15).astype(np.int32)
+        self.ranges=np.arange(2,15).astype(np.int32)
 
     def bev_xy2index_lidar(self,x,y):
         if y>0.0:
@@ -255,17 +257,22 @@ class osm_v2():
         return self.map_view_df.iloc[:X,:]
         # return self.map_view_df
 
-    def findGolbaltopX_descriptor(self,scanImage,X):
+    def findGolbaltopX_descriptor(self,scanImage,X,init_guess=None):
+        if init_guess!=None:
+            x,y,R=init_guess
+            df = self.map_view_df[(self.map_view_df.e>x-R) & (self.map_view_df.e<x+R) & (self.map_view_df.n>y-R )& (self.map_view_df.n<y+R)]
+        else:
+            df = self.map_view_df.copy()
         query_pixel_count = (np.linalg.norm(scanImage))**2
         q_dec2d = self.findRoadDescriptor(scanImage,self.ranges)
         q_dec1d = q_dec2d.sum(axis=-1)
-        self.map_view_df['diff1d']=self.map_view_df.descriptor1d.apply(lambda x:np.linalg.norm(x-q_dec1d))
-        self.map_view_df['diffnorm']=np.abs(self.map_view_df['pixel_count']-query_pixel_count)
-        self.map_view_df['f1'] = 2*(self.map_view_df.diff1d*self.map_view_df.diffnorm)/(self.map_view_df.diff1d+self.map_view_df.diffnorm)
-        self.map_view_df.sort_values(by=['diff1d','diffnorm'],inplace=True,ascending=True)
-        # self.map_view_df = self.map_view_df[self.map_view_df['similarity']>=0.65]
+        df['diff1d']=df.descriptor1d.apply(lambda x:np.linalg.norm(x-q_dec1d))
+        df['diffnorm']=np.abs(df['pixel_count']-query_pixel_count)
+        df['f1'] = 2*(df.diff1d*df.diffnorm)/(df.diff1d+df.diffnorm)
+        df.sort_values(by=['diff1d','diffnorm'],inplace=True,ascending=True)
+        # df = df[df['similarity']>=0.65]
 
-        return self.map_view_df.iloc[:X,:]
+        return df.iloc[:X,:]
         # return self.map_view_df
     def findPose(self,scanImage,X,angular_res):
         top100 = self.findGolbaltopX(scanImage,X)
