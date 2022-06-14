@@ -1,0 +1,6 @@
+float32 seed_x
+float32 seed_y
+float32 range
+sensor_msgs/Image lidar_bev_image
+---
+geometry_msgs/Pose2D[] matches

@@ -10,7 +10,7 @@ import ros_numpy
 import pandas as pd
 from scipy import ndimage
 class osm_v2():
-    def __init__(self):
+    def __init__(self,load_saved_df=False):
         path_to_mat = rospy.get_param("/osm_particle_filter/path_to_dmat")
         road_width =  rospy.get_param("/osm_particle_filter/road_width")
         self.res_x = rospy.get_param("/osm_particle_filter/map_resolution_x")
@@ -24,8 +24,11 @@ class osm_v2():
         self.map_bev = np.where(self.base_map<road_width,1,0)
         self.map_nodes = np.where(self.base_map<1,1,0)
         self.nodes = np.transpose(np.nonzero(self.base_map<=1))
-        # self.map_view_df=self.initMap()
+        
         self.ranges=np.arange(2,15).astype(np.int32)
+        if load_saved_df:
+            path = rospy.get_param('/osm_localization/path_to_map_df')
+            self.map_view_df= pd.read_csv(path)
 
     def bev_xy2index_lidar(self,x,y):
         if y>0.0:
