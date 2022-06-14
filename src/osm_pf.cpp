@@ -274,6 +274,106 @@ osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_r
 
 }
 
+osm_pf::osm_pf(bool v2,std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_res_x,f map_res_y,int particles,f seed_x,f seed_y,bool mono,float road_sampling_factor,float nroad_sampling_factor)
+{
+    num_particles = particles;
+    max_particles = particles;   
+    mono_mode = mono;
+    std_x = 10000.0;
+    std_y = 10000.0;
+
+    d_matrix = xt::load_npy<f>(path_to_d_mat);
+    count = 0;
+    origin_x = min_x;
+    origin_y = min_y;
+    max_x = Max_x;
+    max_y = Max_y;
+    map_resolution_x  =map_res_x;
+    map_resolution_y  =map_res_y;
+    
+    nh.getParam("/osm_particle_filter/down_sample_size",down_sample_size);
+    nh.getParam("/osm_particle_filter/init_cov_linear",init_cov_linear);
+    nh.getParam("/osm_particle_filter/init_cov_angular",init_cov_angular);
+    nh.getParam("/osm_particle_filter/odom_cov_lin",odom_cov_lin);
+    nh.getParam("/osm_particle_filter/odom_cov_angular",odom_cov_angular);
+    nh.getParam("/osm_particle_filter/resampling_count",resampling_count);
+    nh.getParam("/osm_particle_filter/use_pi_weighting",use_pi_weighting);
+    nh.getParam("/osm_particle_filter/use_pi_resampling",use_pi_resampling);
+    nh.getParam("/osm_particle_filter/road_width",road_width);
+    nh.getParam("/osm_particle_filter/pi_gain",pi_gain);
+    nh.getParam("/osm_particle_filter/queue_size",queue_size);
+    nh.getParam("/osm_particle_filter/sync_queue_size",sync_queue_size);
+    nh.getParam("/osm_particle_filter/project_cloud",project_cloud);
+    nh.getParam("/osm_particle_filter/use_dynamic_resampling",use_dynamic_resampling);
+    nh.getParam("/osm_particle_filter/estimate_gps_error",estimate_gps_error);
+    nh.getParam("/osm_particle_filter/weight_function",weight_function);
+    nh.getParam("/osm_particle_filter/min_particles",min_particles);
+    nh.getParam("/osm_particle_filter/std_lim",std_lim);
+    nh.getParam("/osm_particle_filter/adaptive_mode",adaptive_mode);
+    
+    m = (max_particles-min_particles)/std_lim;
+
+    // Initialize Random generators
+    gen.reset(new std::default_random_engine);
+    dist_ptr.reset(new std::normal_distribution<f>(osm_pf::f(0.0),odom_cov_lin));
+    dist_x = *dist_ptr;
+    dist_ptr.reset(new std::normal_distribution<f>(osm_pf::f(0.0),odom_cov_angular));
+    dist_theta = *dist_ptr;
+    road_clloud_factor = road_sampling_factor; non_road_cloud_factor = nroad_sampling_factor;
+    road_filter.setFilterFieldName("intensity");
+    road_filter.setFilterLimits(127.0,256.0);
+    random_sample.setSeed(std::rand());
+    
+    // dist_theta.reset(new std::normal_distribution<f>(osm_pf::f(0.0),odom_cov_angular));
+    // dist_x.reset(osm_pf::f(0.0),odom_cov_lin);
+    // Initialize ROS attributes
+    pf_publisher = nh.advertise<geometry_msgs::PoseArray>("osm_pose_estimate",100);
+    pf_avg_pub = nh.advertise<geometry_msgs::PoseStamped>("osm_average_pose_estimate",100);
+    odom_sub.subscribe(nh,"/vehicle/odometry",queue_size);
+    pc_sub.subscribe(nh,"/road_points",queue_size);
+    img_sub.subscribe(nh,"/lidar_bev",queue_size);
+    sync_v2.reset(new Sync_v2(sync_policy_osm_locv2(sync_queue_size),odom_sub,pc_sub,img_sub)) ;
+
+    Xt = std::vector<pose>(num_particles);
+    w_sum_sq = 1/(3*static_cast<f>(num_particles));
+    if(use_pi_weighting && use_pi_resampling)
+    {
+        Wt = std::vector<f>(num_particles,1.0);
+    }
+    else if (use_pi_weighting && !use_pi_resampling)
+    {
+        Wt  = std::vector<f>(num_particles,1.0);
+    }
+    else if(!use_pi_weighting && use_pi_resampling)
+    
+    {
+        Wt  = std::vector<f>(num_particles,1.0);
+    }
+    else
+    {
+        Wt  = std::vector<f>(num_particles,0.0);
+    }
+
+    prev_odom.pose.pose.position.x = 0.;
+    prev_odom.pose.pose.position.y = 0.;
+    prev_odom.pose.pose.position.z = 0.;
+    // prev_odom.pose.pose.orientation.x = 0.;
+    // prev_odom.pose.pose.orientation.y = 0.;
+    // prev_odom.pose.pose.orientation.z = 0.;
+    // prev_odom.pose.pose.orientation.w = 1.;
+    prev_odom.pose.pose.orientation = tf::createQuaternionMsgFromYaw(0.0);
+    prev_odom.twist.twist.linear.x = 0.;
+    prev_odom.twist.twist.linear.y = 0.;
+    prev_odom.twist.twist.linear.z = 0.;
+    prev_odom.twist.twist.angular.x = 0.;
+    prev_odom.twist.twist.angular.y = 0.;
+    prev_odom.twist.twist.angular.z = 0.;
+    std::cout<<"\n Weight sum sq initialized to: "<< w_sum_sq;
+    std::cout<<"\n Neff initialized to: "<< 1/w_sum_sq;
+    
+
+}
+
 void osm_pf::setSeed(f x, f y)
 {
     init_x = x;

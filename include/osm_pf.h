@@ -66,10 +66,11 @@ namespace osmpf
         message_filters::Subscriber<sensor_msgs::PointCloud2> pc_sub;
         message_filters::Subscriber<sensor_msgs::Image> img_sub;
         typedef message_filters::sync_policies::ApproximateTime<nav_msgs::Odometry,sensor_msgs::PointCloud2> sync_policy;
-        typedef message_filters::sync_policies::ApproximateTime<nav_msgs::Odometry,sensor_msgs::Image> sync_policy_mono;
+        typedef message_filters::sync_policies::ApproximateTime<nav_msgs::Odometry,sensor_msgs::PointCloud2,sensor_msgs::Image> sync_policy_osm_locv2;
         typedef message_filters::Synchronizer<sync_policy> Sync;
-        typedef message_filters::Synchronizer<sync_policy_mono> Sync_mono;
+        typedef message_filters::Synchronizer<sync_policy_osm_locv2> Sync_v2;
         std::shared_ptr<Sync> sync;
+        std::shared_ptr<Sync_v2> sync_v2;
         tf::TransformBroadcaster osm_pose_broadcaster;
         pcl::PointCloud<pcl::PointXYZI>::Ptr p_cloud_filtered;
 
@@ -103,6 +104,7 @@ namespace osmpf
         public:
         // Methods
         osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_res_x,f map_res_y,int particles=100,f seed_x=0,f seed_y=0,bool mono=false,float road_sampling_factor=0.70,float nroad__sampling_factor=0.2);
+        osm_pf(bool v2,std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_res_x,f map_res_y,int particles=100,f seed_x=0,f seed_y=0,bool mono=false,float road_sampling_factor=0.70,float nroad__sampling_factor=0.2);
         void init_particles();
         pose find_xbar(pose x_tminus1,f dx,f dy, f dtheta);
         std::vector<pose> find_Xbar(std::vector<pose> X_tminus1,nav_msgs::Odometry odom);
