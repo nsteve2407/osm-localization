@@ -1,3 +1,4 @@
+#pragma once
 #include "osm_pf.h"
 #include<osm_localization/GlobalSearch.h>
 #include<nav_msgs/Odometry.h>

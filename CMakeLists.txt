@@ -60,8 +60,11 @@ include
   ${OpenCV_INCLUDE_DIRS}
 )
 add_definitions(${PCL_DEFINITIONS})
-add_library(osmpf /home/mkz/catkin_ws/src/osm-localization/src/osm_pf.cpp)
-# add_library(utmlib /home/mkz/catkin_ws/src/osm-localization/src/utm.cpp)
+add_library(osmpf
+  /home/mkz/catkin_ws/src/osm-localization/src/osm_pf.cpp
+  /home/mkz/catkin_ws/src/osm-localization/src/osmv2.cpp
+)
+# add_library(osmpf2 /home/mkz/catkin_ws/src/osm-localization/src/osmv2.cpp)
 
 include_directories(${PCL_INCLUDE_DIRS})
 link_directories(${PCL_LIBRARY_DIRS})
@@ -85,6 +88,17 @@ target_link_libraries(pose_cov ${catkin_LIBRARIES} ${Boost_LIBRARIES})
 
 add_executable(img_to_pointcloud src/img_to_pointcloud.cpp)
 target_link_libraries(img_to_pointcloud osmpf ${catkin_LIBRARIES} -xc++ 
+${xtensor_LIBRARIES} 
+${PCL_LIBRARIES}
+${Boost_LIBRARIES}
+${Eigen3_LIBRARIES}
+Eigen3::Eigen
+${OpenCV_INCLUDE_DIRS}
+${OpenCV_LIBS}
+${OpenCV_LIBRARIES})
+
+add_executable(pf_v2_main src/v2/pf_v2_main.cpp)
+target_link_libraries(pf_v2_main osmpf ${catkin_LIBRARIES} -xc++ 
 ${xtensor_LIBRARIES} 
 ${PCL_LIBRARIES}
 ${Boost_LIBRARIES}

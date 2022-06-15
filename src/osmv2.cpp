@@ -23,8 +23,6 @@ osm_loc_v2::osm_loc_v2()
     nh.getParam("/osm_particle_filter/map_resolution_x",res_x);
     nh.getParam("/osm_particle_filter/map_resolution_y",res_y);
     nh.getParam("/osm_particle_filter/sensing_mode",sensing_mode);
-
-    nh.getParam("/osm_particle_filter/pose_angular_res",pose_angular_res);
     nh.getParam("/osm_particle_filter/path_to_dmat",path);
     
     ROS_INFO("Parameters Loaded Successfully");
@@ -49,9 +47,9 @@ void osm_loc_v2::init_particles_from_srv(osm_localization::GlobalSearch::Respons
     {
         for(int j=0;j<360;j+=pose_angular_res)
         {
-        osm_pf_core->Xt[i].x = r.matches[i].x;
-        osm_pf_core->Xt[i].y = r.matches[i].y;
-        osm_pf_core->Xt[i].y = (j*M_PI)/180.0;
+        osm_pf_core->Xt[i].x = _Float64(r.matches[i].x);
+        osm_pf_core->Xt[i].y = _Float64(r.matches[i].y);
+        osm_pf_core->Xt[i].y = _Float64((j*M_PI)/180.0);
         }
     }
     ROS_INFO("Particles intialized using Global Search");

@@ -323,9 +323,7 @@ osm_pf::osm_pf(bool v2,std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y
     road_filter.setFilterFieldName("intensity");
     road_filter.setFilterLimits(127.0,256.0);
     random_sample.setSeed(std::rand());
-    
-    // dist_theta.reset(new std::normal_distribution<f>(osm_pf::f(0.0),odom_cov_angular));
-    // dist_x.reset(osm_pf::f(0.0),odom_cov_lin);
+
     // Initialize ROS attributes
     pf_publisher = nh.advertise<geometry_msgs::PoseArray>("osm_pose_estimate",100);
     pf_avg_pub = nh.advertise<geometry_msgs::PoseStamped>("osm_average_pose_estimate",100);
@@ -335,7 +333,7 @@ osm_pf::osm_pf(bool v2,std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y
     sync_v2.reset(new Sync_v2(sync_policy_osm_locv2(sync_queue_size),odom_sub,pc_sub,img_sub)) ;
 
     Xt = std::vector<pose>(num_particles);
-    w_sum_sq = 1/(3*static_cast<f>(num_particles));
+    w_sum_sq = 1/(2*static_cast<f>(num_particles));
     if(use_pi_weighting && use_pi_resampling)
     {
         Wt = std::vector<f>(num_particles,1.0);
@@ -1112,7 +1110,7 @@ void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs:
             count = 0;
 
             publish_msg(X_t_est,Wt_est,u.header);
-            w_sum_sq = 1/(3*static_cast<f>(num_particles));
+            w_sum_sq = 1/(2*static_cast<f>(num_particles));
             // std::cout<<"\n Weight sum sq: "<< w_sum_sq;
 
         }
