@@ -2,7 +2,7 @@
 
 <launch>
 
-<node name="osm_particle_filter" pkg="osm-localization" type="pf_node" output="screen" >
+<node name="osm_particle_filter" pkg="osm_localization" type="pf_node" output="screen" >
     <rosparam command="load" file="$(find osm-localization)/config/config.yaml" />
 
 

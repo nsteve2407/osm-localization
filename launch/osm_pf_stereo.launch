@@ -8,7 +8,7 @@
     <remap from="rgb/image_rect_color" to="/zed/zed_node/left/image_rect_color"/>
     <remap from="depth_registered/image_rect" to="/zed/zed_node/depth/depth_registered"/> -->
 </node>
-<node name="vehicle_odometry" pkg="osm-localization" type="odometry.py"/>
+<node name="vehicle_odometry" pkg="osm_localization" type="odometry.py"/>
 <!-- <node name="tf_imu_base" pkg="tf" type="static_transform_publisher" args=" 0 0 0 0 0 0 base_footprint imu_link 100" output="screen" /> -->
 <!-- <include file="$(find robot_localization)/launch/ekf_template.launch" /> -->
 
@@ -20,7 +20,7 @@
 
 <!-- <node name="rviz" pkg ="rviz" type="rviz" args="-d $(find osm-localization)/osm_pf.rviz" /> -->
 
-<node name="osm_particle_filter" pkg="osm-localization" type="pf_node" output="screen" >
+<node name="osm_particle_filter" pkg="osm_localization" type="pf_node" output="screen" >
     <rosparam command="load" file="$(arg config_file)" />
 
 
@@ -39,7 +39,7 @@
 </node>
 <node name="tf_map" pkg="tf" type="static_transform_publisher" args=" 738912.92 3392799.59 0 0 0 0 1 map local_map 100" />
 
-<node name="logger" pkg="osm-localization" type="error_log.py" />
+<node name="logger" pkg="osm_localization" type="error_log.py" />
 
 <node name="bag_play" pkg="rosbag" type="play" args="--clock /home/mkz/bag_files/03-09-22(stereo)/run1_stereo.bag "/>
 

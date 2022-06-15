@@ -3,7 +3,7 @@
 <launch>
 
 <include file="$(find osm-localization)/launch/ouster_driver.launch" />
-<node name="vehicle_odometry" pkg="osm-localization" type="odometry.py"/>
+<node name="vehicle_odometry" pkg="osm_localization" type="odometry.py"/>
 <!-- <node name="tf_imu_base" pkg="tf" type="static_transform_publisher" args=" 0 0 0 0 0 0 base_footprint imu_link 100" output="screen" /> -->
 <!-- <include file="$(find robot_localization)/launch/ekf_template.launch" /> -->
 
