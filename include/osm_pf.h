@@ -49,7 +49,7 @@ namespace osmpf
         float odom_cov_angular;
         int count,resampling_count;
         bool use_pi_weighting, use_pi_resampling,project_cloud,use_dynamic_resampling,estimate_gps_error, adaptive_mode, mono_mode;
-        f w_sum_sq;
+        f w_sum_sq,N_eff;//N_eff is a measure of number of effective particles. When weights are concentrated at a few particles N_eff falls less than N and when they are evenly distributed N_eff=N 
         int road_width,queue_size,sync_queue_size;
         float road_clloud_factor,non_road_cloud_factor;
         f pi_gain;
@@ -120,6 +120,7 @@ namespace osmpf
         std::shared_ptr<pose> weight_pose(std::vector<pose> Poses,std::vector<f> Weights);
         void publish_msg(std::vector<pose> X,std::vector<f> W,std_msgs::Header h);
         f weightfunction(f distance,f road_width,f intensity);
+        std::vector<f> rescaleWeights(std::vector<f>& W); // Rescale weights to sum to 1.0
         void std_dibn();
         void update_num_particles();
         pcl::PointCloud<pcl::PointXYZI>::Ptr Image_to_pcd_particleframe(const sensor_msgs::Image& image,f pose_x,f pose_y,f pose_theta);

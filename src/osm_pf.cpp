@@ -525,6 +525,17 @@ osm_pf::f osm_pf::weightfunction(f distance,f road_width,f intensity)
     
 }
 
+std::vector<osmpf::osm_pf::f> osm_pf::rescaleWeights(std::vector<osmpf::osm_pf::f>& W)
+{
+    f sum = std::accumulate(W.begin(),W.end(),0);
+    if (sum>=0.0001)
+    {
+        std::transform(W.begin(), W.end(), W.begin(), std::bind(std::multiplies<f>(), std::placeholders::_1, sum));
+        return W;
+    }
+    return std::vector<f>(num_particles,0.0);
+}
+
 osm_pf::f osm_pf::find_wt_point(pcl::PointXYZI point)
 {
     int e = (int((std::round((point.x - origin_x)/map_resolution_x))) )-1;
@@ -791,7 +802,8 @@ std::vector<osm_pf::f> osm_pf::find_Wt(std::vector<pose> Xtbar,sensor_msgs::Poin
         weight=find_wt(p,p_cloud_filtered);
         weights.push_back(weight);
     }
-    return weights;
+
+    return rescaleWeights(weights);
 }
 
 std::vector<pose> osm_pf::sample_xt(std::vector<pose> Xbar_t,std::vector<f>& Wt)
@@ -921,7 +933,7 @@ void osm_pf::publish_msg(std::vector<pose> X,std::vector<f> W,std_msgs::Header h
        if(project_cloud)
         {
 
-;
+
         sensor_msgs::PointCloud2 pc_cloud_msg;
         pcl::toROSMsg(*p_cloud_filtered,pc_cloud_msg);
         pc_cloud_msg.header.frame_id  = "osm_pose_estimate";
@@ -1063,14 +1075,23 @@ void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs:
     std::vector<pose> Xbar = find_Xbar(Xt,u);
 
     std::vector<f> Wt_est  = find_Wt(Xbar,z);
+    w_sum_sq = std::inner_product(Wt_est.begin(),Wt_est.end(),Wt_est.begin(),0);
+    if (w_sum_sq==0.000)
+    {
+        N_eff=0.0;
+    }
+    else
+    {
+        N_eff = 1/(w_sum_sq);
+    }
     // std::cout<<"\n Initial Weights calculated \n";
 
     if(use_dynamic_resampling)
     {
-        f n_eff = (1.0/w_sum_sq);
+
         // std::cout<<"\n Weight sum sq: "<< w_sum_sq;
         // std::cout<<"\n Number of effective particles: "<< n_eff;
-        if(n_eff < (((num_particles))/10) || count>resampling_count)
+        if(N_eff < ((f(num_particles))/3.0) || count>resampling_count)
         {
             std_dibn();
             // std::cout<<"Number of particles: "<<num_particles<<std::endl;
@@ -1109,7 +1130,7 @@ void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs:
             Wt = Wt + Wt_est;
             }
 
-            w_sum_sq = std::inner_product(Wt.begin(),Wt.end(),Wt.begin(),0);
+            // w_sum_sq = std::inner_product(Wt.begin(),Wt.end(),Wt.begin(),0);
 
             
             // if(w_sum_sq == 0.0)
