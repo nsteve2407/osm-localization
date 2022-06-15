@@ -90,3 +90,8 @@ void osm_loc_v2::attach_callback()
 {
     osm_pf_core->sync_v2->registerCallback(boost::bind(&osm_loc_v2::osm_v2_callback,this,_1,_2,_3));
 }
+
+bool osm_loc_v2::is_kidnapped()
+{
+    return osm_pf_core->N_eff==0.0?:false;
+}
