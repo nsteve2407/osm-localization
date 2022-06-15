@@ -28,7 +28,7 @@ class osm_v2():
         self.ranges=np.arange(2,15).astype(np.int32)
         if load_saved_df:
             path = rospy.get_param('/osm_localization/path_to_map_df')
-            self.map_view_df= pd.read_csv(path)
+            self.map_view_df= pd.read_pickle(path)
 
     def bev_xy2index_lidar(self,x,y):
         if y>0.0:
