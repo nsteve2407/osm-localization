@@ -260,8 +260,8 @@ class osm_v2():
         return self.map_view_df.iloc[:X,:]
         # return self.map_view_df
 
-    def findGolbaltopX_descriptor(self,scanImage,X,init_guess=None):
-        if init_guess!=None:
+    def findGolbaltopX_descriptor(self,scanImage,X,init_guess=[0.0,0.0,0.0]):
+        if init_guess[0]!=0.0 or init_guess[1]!=0.0 or init_guess[2]!=0.0:
             x,y,R=init_guess
             df = self.map_view_df[(self.map_view_df.e>x-R) & (self.map_view_df.e<x+R) & (self.map_view_df.n>y-R )& (self.map_view_df.n<y+R)]
         else:

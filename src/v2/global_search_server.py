@@ -13,9 +13,9 @@ def main():
     else:
         search.initMapDescriptors()
     
-    def service_callback(request):
-        img = ros_numpy.numpify(request.lidar_bev_image)
-        df = search.findGolbaltopX_descriptor(img,global_search_topX,[request.seed_x,request.seed_y,request.range])
+    def service_callback(srv_msg):
+        img = ros_numpy.numpify(srv_msg.request.lidar_bev_image)
+        df = search.findGolbaltopX_descriptor(img,global_search_topX,[srv_msg.request.seed_x,srv_msg.request.seed_y,srv_msg.request.range])
         poses = []
         Pose = Pose2D()
         for i in range(df.shape[0]):
@@ -24,7 +24,9 @@ def main():
             Pose.theta = 0
             poses.append(Pose)
 
-        return GlobalSearchResponse(poses)
+        srv_msg.response.matches = poses            
+
+        return True
 
     s = rospy.Service("osm_global_search",GlobalSearch,service_callback)
     rospy.loginfo("OSM Global search service Initialized. Waiting for request ..\n")
