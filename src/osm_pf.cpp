@@ -525,13 +525,17 @@ osm_pf::f osm_pf::weightfunction(f distance,f road_width,f intensity)
 
 std::vector<osmpf::osm_pf::f> osm_pf::rescaleWeights(std::vector<osmpf::osm_pf::f>& W)
 {
-    f sum = std::accumulate(W.begin(),W.end(),0);
-    if (sum>=0.0001)
-    {
-        std::transform(W.begin(), W.end(), W.begin(), std::bind(std::multiplies<f>(), std::placeholders::_1, sum));
-        return W;
-    }
-    return std::vector<f>(num_particles,0.0);
+    f sum = std::accumulate(W.begin(),W.end(),f(0.0));
+    // std::cout<<"Weights before::"<<W[0]<<std::endl;
+    // std::cout<<"Sum is::"<<sum<<std::endl;
+    // if (sum>=f(1e-40))
+    // {   
+
+    std::transform(W.begin(), W.end(), W.begin(), std::bind(std::multiplies<f>(), std::placeholders::_1, f(1.0)/sum));
+    // std::cout<<"Weights after::"<<W[0]<<std::endl;
+    return W;
+    // }
+    // return std::vector<f>(num_particles,0.0);
 }
 
 osm_pf::f osm_pf::find_wt_point(pcl::PointXYZI point)
@@ -802,6 +806,7 @@ std::vector<osm_pf::f> osm_pf::find_Wt(std::vector<pose> Xtbar,sensor_msgs::Poin
     }
 
     return rescaleWeights(weights);
+    // return weights;
 }
 
 std::vector<pose> osm_pf::sample_xt(std::vector<pose> Xbar_t,std::vector<f>& Wt)
@@ -1073,7 +1078,8 @@ void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs:
     std::vector<pose> Xbar = find_Xbar(Xt,u);
 
     std::vector<f> Wt_est  = find_Wt(Xbar,z);
-    w_sum_sq = std::inner_product(Wt_est.begin(),Wt_est.end(),Wt_est.begin(),0);
+    w_sum_sq = std::inner_product(Wt_est.begin(),Wt_est.end(),Wt_est.begin(),f(0.0));
+    // std::cout<<"Normalized weights sum:"<<w_sum_sq<<std::endl;
     if (w_sum_sq==0.000)
     {
         N_eff=0.0;
@@ -1082,7 +1088,7 @@ void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs:
     {
         N_eff = 1/(w_sum_sq);
     }
-    // std::cout<<"\n Initial Weights calculated \n";
+    // ROS_INFO("Number of effective particles: %f",N_eff);
 
     if(use_dynamic_resampling)
     {
@@ -1092,7 +1098,7 @@ void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs:
         if(N_eff < ((f(num_particles))/3.0) || count>resampling_count)
         {
             std_dibn();
-            // std::cout<<"Number of particles: "<<num_particles<<std::endl;
+            ROS_INFO("Resampling.Number of effective particles: %f",N_eff);
             if(adaptive_mode)
             {
                 // std::cout<<"Updateing num particles..\n";
