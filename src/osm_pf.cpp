@@ -1122,7 +1122,7 @@ void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs:
         }
         else
         {
-            // std::cout<<"\n -------------- Not Sampling Weights----- "<<std::endl;
+            std::cout<<"\n -------------- Not Sampling Weights----- "<<std::endl;
             Xt = Xbar;
 
             if (use_pi_resampling)

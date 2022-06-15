@@ -70,11 +70,11 @@ map_resolution_y : 1.500093213502397
 # map_resolution_y : 1.4999315408538794
 num_particles : 100000
 down_sample_size : 2.0
-init_cov_linear : 800.0
+init_cov_linear : 1000.0
 init_cov_angular : 1.57
 odom_cov_lin : 0.1
 odom_cov_angular : 0.05
-resampling_count : 20
+resampling_count : 30
 
 use_pi_weighting : true
 use_pi_resampling : true

@@ -33,7 +33,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: ""
+    SyncSource: PointCloud2
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -155,7 +155,7 @@ Visualization Manager:
       Topic: /gps_utm
       Unreliable: false
       Value: true
-    - Alpha: 0.009999999776482582
+    - Alpha: 1
       Arrow Length: 10
       Axes Length: 0.30000001192092896
       Axes Radius: 0.009999999776482582
@@ -186,16 +186,16 @@ Visualization Manager:
       Decay Time: 0
       Enabled: true
       Invert Rainbow: false
-      Max Color: 92; 53; 102
-      Min Color: 211; 215; 207
+      Max Color: 255; 25; 0
+      Min Color: 46; 52; 54
       Name: PointCloud2
       Position Transformer: XYZ
       Queue Size: 10
       Selectable: true
       Size (Pixels): 3
-      Size (m): 0.800000011920929
-      Style: Flat Squares
-      Topic: /pf_cloud_map_frame
+      Size (m): 1.5
+      Style: Boxes
+      Topic: /road_points
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: false
@@ -228,7 +228,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 4058.09375
+      Distance: 1988.7554931640625
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -236,9 +236,9 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 3728.433837890625
-        Y: 9902.423828125
-        Z: 322.14923095703125
+        X: 4287.09130859375
+        Y: 5742.75146484375
+        Z: 190.5625457763672
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
@@ -265,4 +265,4 @@ Window Geometry:
     collapsed: true
   Width: 960
   X: 2010
-  Y: 214
+  Y: 27

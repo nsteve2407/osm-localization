@@ -3,7 +3,7 @@
 <launch>
 
 <include file="$(find osm_localization)/launch/ouster_driver.launch" />
-<arg name="config_file" default="/home/mkz/catkin_ws/src/osm_localization/config/v2/config.yaml" />
+<arg name="config_file" default="/home/mkz/catkin_ws/src/osm-localization/config/v2/config.yaml" />
 
 <include file="$(find road_seg_deeplabv3)/launch/s-layer.launch" />
 
