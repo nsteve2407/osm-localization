@@ -49,7 +49,7 @@ void osm_loc_v2::init_particles_from_srv(osm_localization::GlobalSearch::Respons
         {
         osm_pf_core->Xt[i].x = _Float64(r.matches[i].x);
         osm_pf_core->Xt[i].y = _Float64(r.matches[i].y);
-        osm_pf_core->Xt[i].y = _Float64((j*M_PI)/180.0);
+        osm_pf_core->Xt[i].theta = _Float64((j*M_PI)/180.0);
         }
     }
     ROS_INFO("Particles intialized using Global Search");
@@ -66,7 +66,7 @@ void osm_loc_v2::osm_v2_callback(const nav_msgs::OdometryConstPtr& odom,const se
         srv_msg.request.range  = osm_pf_core->init_cov_linear;
         srv_msg.request.lidar_bev_image = *lidar_bev_img;
 
-        if( global_search.call(srv_msg))
+        if( global_search.call(srv_msg.request,srv_msg.response))
         {
             ROS_INFO("Global Search completed");
             init_particles_from_srv(srv_msg.response);

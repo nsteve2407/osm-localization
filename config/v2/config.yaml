@@ -36,8 +36,8 @@ max_x : 748093.029759
 min_y : 3391022.43960
 max_y : 3400671.03915
 # lidar
-seed_x : 743124.69
-seed_y : 3398103.49
+seed_x : 743037.87
+seed_y : 3398114.44
 # stereo
 # seed_x : 742585.33
 # seed_y : 3397636.54
@@ -72,14 +72,14 @@ map_resolution_y : 1.500093213502397
 # map_resolution_y : 1.4999315408538794
 num_particles : 100000
 down_sample_size : 2.0
-init_cov_linear : 800.0
+init_cov_linear : 100.0
 init_cov_angular : 1.57
 odom_cov_lin : 0.1
 odom_cov_angular : 0.05
-resampling_count : 20
+resampling_count : 10
 
 use_pi_weighting : true
-use_pi_resampling : false
+use_pi_resampling : true
 
 road_width : 10.0
 pi_gain : 1.0
@@ -105,3 +105,9 @@ scale_x : 0.0869
 scale_y : 0.0869
 img_size_x : 320
 img_size_y : 640
+
+
+# Params specific to v2
+global_search_topX : 100
+pose_angular_res : 1 #Angular resolution in degrees for global search step 2
+path_to_map_df : /home/mkz/catkin_ws/src/osm-localization/distance_maps/run1_df.pkl

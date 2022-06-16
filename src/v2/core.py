@@ -27,7 +27,7 @@ class osm_v2():
         
         self.ranges=np.arange(2,15).astype(np.int32)
         if load_saved_df:
-            path = rospy.get_param('/osm_localization/path_to_map_df')
+            path = rospy.get_param('/osm_particle_filter/path_to_map_df')
             self.map_view_df= pd.read_pickle(path)
 
     def bev_xy2index_lidar(self,x,y):
@@ -257,12 +257,12 @@ class osm_v2():
         self.map_view_df.sort_values(by='similarity',inplace=True,ascending=False)
         # self.map_view_df = self.map_view_df[self.map_view_df['similarity']>=0.65]
 
-        return self.map_view_df.iloc[:X,:]
+        return self.map_view_df.iloc[:X,:].copy()
         # return self.map_view_df
 
     def findGolbaltopX_descriptor(self,scanImage,X,init_guess=[0.0,0.0,0.0]):
         if init_guess[0]!=0.0 or init_guess[1]!=0.0 or init_guess[2]!=0.0:
-            x,y,R=init_guess
+            y,x,R=init_guess
             df = self.map_view_df[(self.map_view_df.e>x-R) & (self.map_view_df.e<x+R) & (self.map_view_df.n>y-R )& (self.map_view_df.n<y+R)]
         else:
             df = self.map_view_df.copy()

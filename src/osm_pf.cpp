@@ -326,6 +326,8 @@ osm_pf::osm_pf(bool v2,std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y
 
     // Initialize ROS attributes
     pf_publisher = nh.advertise<geometry_msgs::PoseArray>("osm_pose_estimate",100);
+    pf_lat_lon = nh.advertise<geometry_msgs::PoseArray>("osm_lat_lon",100);
+    pf_cloud_pub = nh.advertise<sensor_msgs::PointCloud2>("pf_cloud_map_frame",100);
     pf_avg_pub = nh.advertise<geometry_msgs::PoseStamped>("osm_average_pose_estimate",100);
     odom_sub.subscribe(nh,"/vehicle/odometry",queue_size);
     pc_sub.subscribe(nh,"/road_points",queue_size);
@@ -350,6 +352,11 @@ osm_pf::osm_pf(bool v2,std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y
     else
     {
         Wt  = std::vector<f>(num_particles,0.0);
+    }
+    bool seed_set=false;
+    if (seed_x!=0.0 || seed_y !=0.0)
+    {
+        setSeed(seed_x,seed_y);
     }
 
     prev_odom.pose.pose.position.x = 0.;
