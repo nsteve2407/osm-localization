@@ -334,25 +334,7 @@ osm_pf::osm_pf(bool v2,std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y
     img_sub.subscribe(nh,"/lidar_bev",queue_size);
     sync_v2.reset(new Sync_v2(sync_policy_osm_locv2(sync_queue_size),odom_sub,pc_sub,img_sub)) ;
 
-    Xt = std::vector<pose>(num_particles);
-    w_sum_sq = 1/(2*static_cast<f>(num_particles));
-    if(use_pi_weighting && use_pi_resampling)
-    {
-        Wt = std::vector<f>(num_particles,1.0);
-    }
-    else if (use_pi_weighting && !use_pi_resampling)
-    {
-        Wt  = std::vector<f>(num_particles,1.0);
-    }
-    else if(!use_pi_weighting && use_pi_resampling)
-    
-    {
-        Wt  = std::vector<f>(num_particles,1.0);
-    }
-    else
-    {
-        Wt  = std::vector<f>(num_particles,0.0);
-    }
+
     bool seed_set=false;
     if (seed_x!=0.0 || seed_y !=0.0)
     {

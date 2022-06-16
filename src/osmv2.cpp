@@ -43,17 +43,39 @@ osm_loc_v2::osm_loc_v2()
 
 void osm_loc_v2::init_particles_from_srv(osm_localization::GlobalSearch::Response r)
 {
-    for(int i=0;i<osm_pf_core->Xt.size();i++)
+    osmpf::pose p;
+    for(int i=0;i<r.matches.size();i++)
     {
         for(int j=0;j<360;j+=pose_angular_res)
         {
-        osm_pf_core->Xt[i].x = _Float64(r.matches[i].x);
-        osm_pf_core->Xt[i].y = _Float64(r.matches[i].y);
-        osm_pf_core->Xt[i].theta = _Float64((j*M_PI)/180.0);
+        p.x =  _Float64(r.matches[i].x);
+        p.y =  _Float64(r.matches[i].y);
+        p.theta = _Float64((j*M_PI)/180.0);
+        osm_pf_core->Xt.push_back(p);
         }
     }
+    osm_pf_core->w_sum_sq = 1/(2*static_cast<osmpf::osm_pf::f>(osm_pf_core->Xt.size()));
+
+    if(osm_pf_core->use_pi_weighting && osm_pf_core->use_pi_resampling)
+    {
+        osm_pf_core->Wt = std::vector<osmpf::osm_pf::f>(osm_pf_core->Xt.size(),1.0);
+    }
+    else if (osm_pf_core->use_pi_weighting && !osm_pf_core->use_pi_resampling)
+    {
+        osm_pf_core->Wt  = std::vector<osmpf::osm_pf::f>(osm_pf_core->Xt.size(),1.0);
+    }
+    else if(!osm_pf_core->use_pi_weighting && osm_pf_core->use_pi_resampling)
+    
+    {
+        osm_pf_core->Wt  = std::vector<osmpf::osm_pf::f>(osm_pf_core->Xt.size(),1.0);
+    }
+    else
+    {
+        osm_pf_core->Wt  = std::vector<osmpf::osm_pf::f>(osm_pf_core->Xt.size(),0.0);
+    }
+
     ROS_INFO("Particles intialized using Global Search");
-}
+}   
 
 void osm_loc_v2::osm_v2_callback(const nav_msgs::OdometryConstPtr& odom,const sensor_msgs::PointCloud2ConstPtr& pc,const sensor_msgs::ImageConstPtr& lidar_bev_img)
 {
@@ -93,3 +115,5 @@ bool osm_loc_v2::is_kidnapped()
 {
     return osm_pf_core->N_eff==0.0?:false;
 }
+// Current error
+// after service response all particles are to close/not uniformly distributed..try uniform/gaussian generator?
