@@ -774,15 +774,15 @@ std::vector<osm_pf::f> osm_pf::find_Wt(std::vector<pose> Xtbar,sensor_msgs::Poin
 
     }
 
-    road_non_road_filter(p_cloud_ptr,road_cloud,nroad_cloud);
+    // road_non_road_filter(p_cloud_ptr,road_cloud,nroad_cloud);
 
 
 
-    // p_cloud_filtered = downsize(p_cloud_ptr);
-    p_cloud_filtered.reset(new pcl::PointCloud<pcl::PointXYZI>);
+    p_cloud_filtered = downsize(p_cloud_ptr);
+    // p_cloud_filtered.reset(new pcl::PointCloud<pcl::PointXYZI>);
 
-    *p_cloud_filtered += *road_cloud;
-    *p_cloud_filtered += *nroad_cloud;
+    // *p_cloud_filtered += *road_cloud;
+    // *p_cloud_filtered += *nroad_cloud;
     // std::cout<<"\nRoad cloud cloud has:"<<road_cloud->points.size()<<" points";
     // std::cout<<"\nNon-road cloud has:"<<nroad_cloud->points.size()<<" points";
     // std::cout<<"\nFiltered cloud has:"<<p_cloud_filtered->points.size()<<" points";
@@ -1604,4 +1604,152 @@ std::vector<osm_pf_stereo::f> osm_pf_stereo::find_Wt_s(std::vector<pose> Xtbar,s
 
 
     return weights;
+}
+
+
+// Dummy function for v2
+void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs::PointCloud2ConstPtr& z_ptr,const sensor_msgs::Image::ConstPtr img)
+{
+    nav_msgs::Odometry u = *u_ptr;
+    sensor_msgs::PointCloud2 z = *z_ptr;
+    
+    std::vector<pose> Xbar = find_Xbar(Xt,u);
+
+    std::vector<f> Wt_est  = find_Wt(Xbar,z);
+    w_sum_sq = std::inner_product(Wt_est.begin(),Wt_est.end(),Wt_est.begin(),f(0.0));
+    // std::cout<<"Normalized weights sum:"<<w_sum_sq<<std::endl;
+    if (w_sum_sq==0.000)
+    {
+        N_eff=0.0;
+    }
+    else
+    {
+        N_eff = 1/(w_sum_sq);
+    }
+    // ROS_INFO("Number of effective particles: %f",N_eff);
+
+    if(use_dynamic_resampling)
+    {
+
+        // std::cout<<"\n Weight sum sq: "<< w_sum_sq;
+        // std::cout<<"\n Number of effective particles: "<< n_eff;
+        if(N_eff < ((f(num_particles))/3.0) || count>resampling_count)
+        {
+            std_dibn();
+            ROS_INFO("Resampling.Number of effective particles: %f",N_eff);
+            if(adaptive_mode)
+            {
+                // std::cout<<"Updateing num particles..\n";
+                update_num_particles();
+            }
+            // std::cout<<"\n -------------- Sampling Weights----- "<<std::endl;
+            std::vector<pose> X_t_est = sample_xt(Xbar,Wt_est);
+            Xt = X_t_est;
+            Wt = Wt_est;
+            // std::cout<<"\nWeights: "<<std::endl;
+            // for(auto x : Wt)
+            // {
+            //     std::cout<<" "<<x;
+            // }
+            count = 0;
+
+            publish_msg(X_t_est,Wt_est,u.header);
+            w_sum_sq = 1/(2*static_cast<f>(num_particles));
+            // std::cout<<"\n Weight sum sq: "<< w_sum_sq;
+
+        }
+        else
+        {
+            std::cout<<"\n -------------- Not Sampling Weights----- "<<std::endl;
+            Xt = Xbar;
+
+            if (use_pi_resampling)
+            {
+                Wt = Wt * Wt_est;
+            }
+            else
+            {
+            Wt = Wt + Wt_est;
+            }
+
+            // w_sum_sq = std::inner_product(Wt.begin(),Wt.end(),Wt.begin(),0);
+
+            
+            // if(w_sum_sq == 0.0)
+            // {
+            //     std::cout<<"\n Resetting Weights due to convergence to zero "<<std::endl;
+            //     w_sum_sq = 1/num_particles;
+            //     Wt  = std::vector<f>(num_particles,1.0);
+
+            // }
+
+
+            // std::cout<<"\nWeights: "<<std::endl;
+            // for(auto x : Wt)
+            // {
+            //     std::cout<<" "<<x;
+            // }
+
+
+            publish_msg(Xt,Wt,u.header);
+            count++;
+
+        }
+
+
+    }
+    else
+    {
+        if (count == resampling_count)
+        {
+            std_dibn();
+            // std::cout<<"Number of particles: "<<num_particles<<std::endl;
+            if(adaptive_mode)
+            {
+                // std::cout<<"Updateing num particles..\n";
+                update_num_particles();
+            }
+            std::vector<pose> X_t_est = sample_xt(Xbar,Wt_est);
+            Xt = X_t_est;
+            Wt = Wt_est;
+
+            // std::cout<<"\nWeights: "<<std::endl;
+            // for(auto x : Wt)
+            // {
+            //     std::cout<<" "<<x;
+            // }
+            count = 0;
+
+            publish_msg(Xt,Wt,u.header);
+            
+            
+        }
+
+        else
+        {
+            // avg_wt = mean(Wt_est);
+            // std::cout<<"Average percentage:"<<avg_wt<<std::endl;
+            Xt = Xbar;
+            if (use_pi_resampling)
+            {
+                Wt = Wt * Wt_est;
+            }
+            else
+            {
+            Wt = Wt + Wt_est;
+            }
+
+
+            // std::cout<<"\nWeights: "<<std::endl;
+            // for(auto x : Wt)
+            // {
+            //     std::cout<<" "<<x;
+            // }
+            publish_msg(Xt,Wt,u.header);
+            count++;
+
+            
+        }
+    }
+
 }

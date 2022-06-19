@@ -51,5 +51,5 @@ figures/**
 notebooks/**
 src/.vscode/**
 src/v2/.vscode/**
-
+*.pkl
 

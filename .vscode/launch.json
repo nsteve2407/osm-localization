@@ -18,6 +18,12 @@
             "target": "/home/mkz/catkin_ws/src/osm-localization/launch/lidar_bev.launch"
         },
         {
+            "name": "Debuf osmpf_v2",
+            "type": "ros",
+            "request": "launch",
+            "target": "/home/mkz/catkin_ws/src/osm-localization/launch/osm_pf_v2.launch"
+        },
+        {
             "name": "g++ - Build and debug active file",
             "type": "cppdbg",
             "request": "launch",

@@ -19,12 +19,8 @@ def main():
         img = ros_numpy.numpify(req.lidar_bev_image)/255
         df = search.findGolbaltopX_descriptor(img,global_search_topX,[req.seed_x,req.seed_y,req.range])
         poses = []
-        Pose = Pose2D()
         for i in range(df.shape[0]):
-            Pose.x = df.n.iloc[i]
-            Pose.y = df.e.iloc[i]
-            Pose.theta = 0
-            poses.append(Pose)
+            poses.append(Pose2D(df.n.iloc[i],df.e.iloc[i],0.0))
      
         resp = GlobalSearchResponse()
         resp.matches = poses

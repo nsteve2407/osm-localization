@@ -46,11 +46,9 @@ void osm_loc_v2::init_particles_from_srv(osm_localization::GlobalSearch::Respons
     osmpf::pose p;
     for(int i=0;i<r.matches.size();i++)
     {
-        for(int j=0;j<360;j+=pose_angular_res)
+        for(osmpf::osm_pf::f j=0.0;j<360.0;j+=pose_angular_res)
         {
-        p.x =  _Float64(r.matches[i].x);
-        p.y =  _Float64(r.matches[i].y);
-        p.theta = _Float64((j*M_PI)/180.0);
+        p = osmpf::pose (osmpf::osm_pf::f(r.matches[i].x),osmpf::osm_pf::f(r.matches[i].y), osmpf::osm_pf::f((j*M_PI)/180.0));
         osm_pf_core->Xt.push_back(p);
         }
     }
@@ -73,6 +71,7 @@ void osm_loc_v2::init_particles_from_srv(osm_localization::GlobalSearch::Respons
     {
         osm_pf_core->Wt  = std::vector<osmpf::osm_pf::f>(osm_pf_core->Xt.size(),0.0);
     }
+    osm_pf_core->num_particles = osm_pf_core->Xt.size();
 
     ROS_INFO("Particles intialized using Global Search");
 }   
@@ -93,6 +92,7 @@ void osm_loc_v2::osm_v2_callback(const nav_msgs::OdometryConstPtr& odom,const se
             ROS_INFO("Global Search completed");
             init_particles_from_srv(srv_msg.response);
             kidnapped=false;
+            // osm_pf_core->sync_v2->registerCallback(boost::bind(&osm_loc_v2::osm_v2_callback,this,_1,_2,_3));
         }
         else
         {

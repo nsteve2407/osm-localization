@@ -12,7 +12,7 @@ class osm_loc_v2
     bool kidnapped;
     std::shared_ptr<osmpf::osm_pf> osm_pf_core;
     int global_search_topX;
-    int pose_angular_res; 
+    osmpf::osm_pf::f pose_angular_res; 
     ros::ServiceClient global_search;
     public:
     // Methods
