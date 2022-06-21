@@ -1083,13 +1083,13 @@ void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs:
     {
 
         // std::cout<<"\n Weight sum sq: "<< w_sum_sq;
-        std::cout<<"\n Number of total particles: "<< num_particles;
-        std::cout<<"\n Number of effective particles: "<< N_eff;
+        // std::cout<<"\n Number of total particles: "<< num_particles;
+        // std::cout<<"\n Number of effective particles: "<< N_eff;
         if(N_eff < ((f(num_particles))/4.0)  || count>resampling_count)
         // if((N_eff <(f)250.0 && count>1) || count>resampling_count)
         {
             std_dibn();
-            ROS_INFO("Resampling.Number of effective particles: %f",N_eff);
+            // ROS_INFO("Resampling.Number of effective particles: %f",N_eff);
             if(adaptive_mode)
             {
                 // std::cout<<"Updateing num particles..\n";
@@ -1113,7 +1113,7 @@ void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs:
         }
         else
         {
-            std::cout<<"\n -------------- Not Sampling Weights----- "<<std::endl;
+            // std::cout<<"\n -------------- Not Sampling Weights----- "<<std::endl;
             Xt = Xbar;
 
             if (use_pi_resampling)
