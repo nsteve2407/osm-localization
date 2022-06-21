@@ -120,7 +120,7 @@ void osm_loc_v2::attach_callback()
 
 bool osm_loc_v2::is_kidnapped()
 {
-    return osm_pf_core->N_eff==0.0?:false;
+    return osm_pf_core->N_eff==0.0?true:false;
 }
 // Current error
 // after service response all particles are to close/not uniformly distributed..try uniform/gaussian generator?

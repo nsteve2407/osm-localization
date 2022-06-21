@@ -20,6 +20,7 @@
 #include<std_msgs/Header.h>
 #include<Eigen/Dense>
 #include<tf/transform_broadcaster.h>
+#include<osm_localization/GlobalSearch.h>
 
 namespace osmpf
 {
@@ -87,6 +88,7 @@ namespace osmpf
 
         nav_msgs::Odometry prev_odom;
         bool seed_set;
+        
         f init_x;
         f init_y;
         // Random Generators
@@ -102,10 +104,15 @@ namespace osmpf
         pcl::PassThrough<pcl::PointXYZI> road_filter;
         pcl::RandomSample<pcl::PointXYZI> random_sample;
 
+        // v2 attributes
+        bool kidnapped;
+        int global_search_topX;
+        osmpf::osm_pf::f pose_angular_res; 
+        ros::ServiceClient global_search;
+
         public:
         // Methods
         osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_res_x,f map_res_y,int particles=100,f seed_x=0,f seed_y=0,bool mono=false,float road_sampling_factor=0.70,float nroad__sampling_factor=0.2);
-        osm_pf(bool v2,std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_res_x,f map_res_y,int particles=100,f seed_x=0,f seed_y=0,bool mono=false,float road_sampling_factor=0.70,float nroad__sampling_factor=0.2);
         void init_particles();
         pose find_xbar(pose x_tminus1,f dx,f dy, f dtheta);
         std::vector<pose> find_Xbar(std::vector<pose> X_tminus1,nav_msgs::Odometry odom);
@@ -114,7 +121,6 @@ namespace osmpf
         std::vector<f> find_Wt(std::vector<pose> Xtbar,sensor_msgs::PointCloud2 p_cloud);
         std::vector<pose> sample_xt(std::vector<pose> Xbar_t,std::vector<f>& Wt);
         void callback(const nav_msgs::OdometryConstPtr&,const sensor_msgs::PointCloud2ConstPtr&);
-        void callback_v2_(const nav_msgs::OdometryConstPtr&,const sensor_msgs::PointCloud2ConstPtr&,const sensor_msgs::Image::ConstPtr img);
         pcl::PointCloud<pcl::PointXYZI>::Ptr drop_zeros(sensor_msgs::PointCloud2 p_cloud);
         void setSeed(f x,f y);
         pcl::PointCloud<pcl::PointXYZI>::Ptr downsize(pcl::PointCloud<pcl::PointXYZI>::Ptr);
@@ -127,6 +133,13 @@ namespace osmpf
         void update_num_particles();
         pcl::PointCloud<pcl::PointXYZI>::Ptr Image_to_pcd_particleframe(const sensor_msgs::Image& image,f pose_x,f pose_y,f pose_theta);
         void road_non_road_filter(pcl::PointCloud<pcl::PointXYZI>::Ptr incloud,pcl::PointCloud<pcl::PointXYZI>::Ptr road_cloud,pcl::PointCloud<pcl::PointXYZI>::Ptr non_road_cloud);
+        // Methods for v2
+        osm_pf(bool v2,std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_res_x,f map_res_y,int particles=100,f seed_x=0,f seed_y=0,int top_x=1000,osm_pf::f pose_ang_res=5.0,bool mono=false,float road_sampling_factor=0.70,float nroad__sampling_factor=0.2);
+        void init_particles_from_srv(osm_localization::GlobalSearch::Response r);
+        bool is_kidnapped();
+        void callback_v2_(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs::PointCloud2ConstPtr& z_ptr,const sensor_msgs::Image::ConstPtr img);
+        void attach_callback_v2();
+
     };
 
     class osm_pf_stereo: public osm_pf

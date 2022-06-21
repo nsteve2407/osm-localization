@@ -274,13 +274,17 @@ osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_r
 
 }
 
-osm_pf::osm_pf(bool v2,std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_res_x,f map_res_y,int particles,f seed_x,f seed_y,bool mono,float road_sampling_factor,float nroad_sampling_factor)
+osm_pf::osm_pf(bool v2,std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_res_x,f map_res_y,int particles,f seed_x,f seed_y,int top_x,osm_pf::f pose_ang_res,bool mono,float road_sampling_factor,float nroad_sampling_factor)
 {
     num_particles = particles;
     max_particles = particles;   
     mono_mode = mono;
     std_x = 10000.0;
     std_y = 10000.0;
+    global_search_topX = top_x;
+    pose_angular_res = pose_ang_res;
+    kidnapped = true;
+    global_search = nh.serviceClient<osm_localization::GlobalSearch>("/osm_global_search");
 
     d_matrix = xt::load_npy<f>(path_to_d_mat);
     count = 0;
@@ -1612,147 +1616,224 @@ std::vector<osm_pf_stereo::f> osm_pf_stereo::find_Wt_s(std::vector<pose> Xtbar,s
 // Dummy function for v2
 void osm_pf::callback_v2_(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs::PointCloud2ConstPtr& z_ptr,const sensor_msgs::Image::ConstPtr img)
 {
-    ROS_INFO("Local Callback called");
-    nav_msgs::Odometry u = *u_ptr;
-    sensor_msgs::PointCloud2 z = *z_ptr;
-    
-    std::vector<pose> Xbar = find_Xbar(Xt,u);
-
-    std::vector<f> Wt_est  = find_Wt(Xbar,z);
-    w_sum_sq = std::inner_product(Wt_est.begin(),Wt_est.end(),Wt_est.begin(),f(0.0));
-    // std::cout<<"Normalized weights sum:"<<w_sum_sq<<std::endl;
-    if (w_sum_sq==0.000)
+    if (kidnapped)
     {
-        N_eff=0.0;
+        osm_localization::GlobalSearch srv_msg;
+
+        srv_msg.request.seed_x = init_x; //Need to update init_x, init_y
+        srv_msg.request.seed_y = init_y;
+        srv_msg.request.range  = init_cov_linear;
+        srv_msg.request.lidar_bev_image = *img;
+
+        if( global_search.call(srv_msg.request,srv_msg.response))
+        {
+            ROS_INFO("Global Search completed");
+            init_particles_from_srv(srv_msg.response);
+            kidnapped=false;
+            publish_msg(Xt,Wt,u_ptr->header);
+            // osm_pf_core->sync_v2.reset(new osmpf::osm_pf::Sync_v2(osmpf::osm_pf::sync_policy_osm_locv2(osm_pf_core->sync_queue_size),osm_pf_core->odom_sub,osm_pf_core->pc_sub,osm_pf_core->img_sub));
+            // osm_pf_core->sync_v2->registerCallback(boost::bind(&osmpf::osm_pf::callback_v2_,osm_pf_core,_1,_2,_3));
+            // ROS_INFO("Switch to local mode");
+        }
+        else
+        {
+            ROS_ERROR("Global search error");
+        }
+
     }
     else
     {
-        N_eff = 1/(w_sum_sq);
-    }
-    // ROS_INFO("Number of effective particles: %f",N_eff);
+        nav_msgs::Odometry u = *u_ptr;
+        sensor_msgs::PointCloud2 z = *z_ptr;
+        
+        std::vector<pose> Xbar = find_Xbar(Xt,u);
 
-    if(use_dynamic_resampling)
-    {
-
-        // std::cout<<"\n Weight sum sq: "<< w_sum_sq;
-        // std::cout<<"\n Number of effective particles: "<< n_eff;
-        if(N_eff < ((f(num_particles))/3.0) || count>resampling_count)
+        std::vector<f> Wt_est  = find_Wt(Xbar,z);
+        w_sum_sq = std::inner_product(Wt_est.begin(),Wt_est.end(),Wt_est.begin(),f(0.0));
+        // std::cout<<"Normalized weights sum:"<<w_sum_sq<<std::endl;
+        if (w_sum_sq==0.000)
         {
-            std_dibn();
-            ROS_INFO("Resampling.Number of effective particles: %f",N_eff);
-            if(adaptive_mode)
-            {
-                // std::cout<<"Updateing num particles..\n";
-                update_num_particles();
-            }
-            // std::cout<<"\n -------------- Sampling Weights----- "<<std::endl;
-            std::vector<pose> X_t_est = sample_xt(Xbar,Wt_est);
-            Xt = X_t_est;
-            Wt = Wt_est;
-            // std::cout<<"\nWeights: "<<std::endl;
-            // for(auto x : Wt)
-            // {
-            //     std::cout<<" "<<x;
-            // }
-            count = 0;
+            N_eff=0.0;
+        }
+        else
+        {
+            N_eff = 1/(w_sum_sq);
+        }
+        // ROS_INFO("Number of effective particles: %f",N_eff);
 
-            publish_msg(X_t_est,Wt_est,u.header);
-            w_sum_sq = 1/(2*static_cast<f>(num_particles));
+        if(use_dynamic_resampling)
+        {
+
             // std::cout<<"\n Weight sum sq: "<< w_sum_sq;
+            // std::cout<<"\n Number of effective particles: "<< n_eff;
+            if(N_eff < ((f(num_particles))/3.0) || count>resampling_count)
+            {
+                std_dibn();
+                ROS_INFO("Resampling.Number of effective particles: %f",N_eff);
+                if(adaptive_mode)
+                {
+                    // std::cout<<"Updateing num particles..\n";
+                    update_num_particles();
+                }
+                // std::cout<<"\n -------------- Sampling Weights----- "<<std::endl;
+                std::vector<pose> X_t_est = sample_xt(Xbar,Wt_est);
+                Xt = X_t_est;
+                Wt = Wt_est;
+                // std::cout<<"\nWeights: "<<std::endl;
+                // for(auto x : Wt)
+                // {
+                //     std::cout<<" "<<x;
+                // }
+                count = 0;
+
+                publish_msg(X_t_est,Wt_est,u.header);
+                w_sum_sq = 1/(2*static_cast<f>(num_particles));
+                // std::cout<<"\n Weight sum sq: "<< w_sum_sq;
+
+            }
+            else
+            {
+                std::cout<<"\n -------------- Not Sampling Weights----- "<<std::endl;
+                Xt = Xbar;
+
+                if (use_pi_resampling)
+                {
+                    Wt = Wt * Wt_est;
+                }
+                else
+                {
+                Wt = Wt + Wt_est;
+                }
+
+                // w_sum_sq = std::inner_product(Wt.begin(),Wt.end(),Wt.begin(),0);
+
+                
+                // if(w_sum_sq == 0.0)
+                // {
+                //     std::cout<<"\n Resetting Weights due to convergence to zero "<<std::endl;
+                //     w_sum_sq = 1/num_particles;
+                //     Wt  = std::vector<f>(num_particles,1.0);
+
+                // }
+
+
+                // std::cout<<"\nWeights: "<<std::endl;
+                // for(auto x : Wt)
+                // {
+                //     std::cout<<" "<<x;
+                // }
+
+
+                publish_msg(Xt,Wt,u.header);
+                count++;
+
+            }
+
 
         }
         else
         {
-            std::cout<<"\n -------------- Not Sampling Weights----- "<<std::endl;
-            Xt = Xbar;
-
-            if (use_pi_resampling)
+            if (count == resampling_count)
             {
-                Wt = Wt * Wt_est;
+                std_dibn();
+                // std::cout<<"Number of particles: "<<num_particles<<std::endl;
+                if(adaptive_mode)
+                {
+                    // std::cout<<"Updateing num particles..\n";
+                    update_num_particles();
+                }
+                std::vector<pose> X_t_est = sample_xt(Xbar,Wt_est);
+                Xt = X_t_est;
+                Wt = Wt_est;
+
+                // std::cout<<"\nWeights: "<<std::endl;
+                // for(auto x : Wt)
+                // {
+                //     std::cout<<" "<<x;
+                // }
+                count = 0;
+
+                publish_msg(Xt,Wt,u.header);
+                
+                
             }
+
             else
             {
-            Wt = Wt + Wt_est;
+                // avg_wt = mean(Wt_est);
+                // std::cout<<"Average percentage:"<<avg_wt<<std::endl;
+                Xt = Xbar;
+                if (use_pi_resampling)
+                {
+                    Wt = Wt * Wt_est;
+                }
+                else
+                {
+                Wt = Wt + Wt_est;
+                }
+
+
+                // std::cout<<"\nWeights: "<<std::endl;
+                // for(auto x : Wt)
+                // {
+                //     std::cout<<" "<<x;
+                // }
+                publish_msg(Xt,Wt,u.header);
+                count++;
+
+                
             }
-
-            // w_sum_sq = std::inner_product(Wt.begin(),Wt.end(),Wt.begin(),0);
-
-            
-            // if(w_sum_sq == 0.0)
-            // {
-            //     std::cout<<"\n Resetting Weights due to convergence to zero "<<std::endl;
-            //     w_sum_sq = 1/num_particles;
-            //     Wt  = std::vector<f>(num_particles,1.0);
-
-            // }
-
-
-            // std::cout<<"\nWeights: "<<std::endl;
-            // for(auto x : Wt)
-            // {
-            //     std::cout<<" "<<x;
-            // }
-
-
-            publish_msg(Xt,Wt,u.header);
-            count++;
-
         }
+    }
 
+}
 
+void osm_pf::init_particles_from_srv(osm_localization::GlobalSearch::Response r)
+{
+    // Xt = std::vector<pose>(int(r.matches.size()*(360/pose_angular_res)));
+    osmpf::pose p;
+    for(int i=0;i<r.matches.size();i++)
+    {
+        for(osmpf::osm_pf::f j=0.0;j<360.0;j+=pose_angular_res)
+        {
+        p = osmpf::pose (osmpf::osm_pf::f(r.matches[i].x),osmpf::osm_pf::f(r.matches[i].y), osmpf::osm_pf::f((j*M_PI)/180.0));
+        Xt.push_back(p);
+        }
+    }
+    w_sum_sq = 1/(2*static_cast<osmpf::osm_pf::f>(Xt.size()));
+
+    if(use_pi_weighting && use_pi_resampling)
+    {
+        Wt = std::vector<osmpf::osm_pf::f>(Xt.size(),1.0);
+    }
+    else if (use_pi_weighting && !use_pi_resampling)
+    {
+        Wt  = std::vector<osmpf::osm_pf::f>(Xt.size(),1.0);
+    }
+    else if(!use_pi_weighting && use_pi_resampling)
+    
+    {
+        Wt  = std::vector<osmpf::osm_pf::f>(Xt.size(),1.0);
     }
     else
     {
-        if (count == resampling_count)
-        {
-            std_dibn();
-            // std::cout<<"Number of particles: "<<num_particles<<std::endl;
-            if(adaptive_mode)
-            {
-                // std::cout<<"Updateing num particles..\n";
-                update_num_particles();
-            }
-            std::vector<pose> X_t_est = sample_xt(Xbar,Wt_est);
-            Xt = X_t_est;
-            Wt = Wt_est;
-
-            // std::cout<<"\nWeights: "<<std::endl;
-            // for(auto x : Wt)
-            // {
-            //     std::cout<<" "<<x;
-            // }
-            count = 0;
-
-            publish_msg(Xt,Wt,u.header);
-            
-            
-        }
-
-        else
-        {
-            // avg_wt = mean(Wt_est);
-            // std::cout<<"Average percentage:"<<avg_wt<<std::endl;
-            Xt = Xbar;
-            if (use_pi_resampling)
-            {
-                Wt = Wt * Wt_est;
-            }
-            else
-            {
-            Wt = Wt + Wt_est;
-            }
-
-
-            // std::cout<<"\nWeights: "<<std::endl;
-            // for(auto x : Wt)
-            // {
-            //     std::cout<<" "<<x;
-            // }
-            publish_msg(Xt,Wt,u.header);
-            count++;
-
-            
-        }
+        Wt  = std::vector<osmpf::osm_pf::f>(Xt.size(),0.0);
     }
+    num_particles = Xt.size();
 
+    w_sum_sq = 1/(3*static_cast<osmpf::osm_pf::f>(num_particles));
+    std::cout<<"\n Weight sum sq initialized to: "<< w_sum_sq;
+    std::cout<<"\n Neff initialized to: "<< 1/w_sum_sq;
+
+    ROS_INFO("Particles intialized using Global Search");
+}   
+
+bool osm_pf::is_kidnapped()
+{
+    return N_eff==0.0?true:false;
+}
+
+void osm_pf::attach_callback_v2()
+{
+    sync_v2->registerCallback(boost::bind(&osm_pf::callback_v2_,this,_1,_2,_3));
 }

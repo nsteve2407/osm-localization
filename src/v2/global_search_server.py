@@ -28,7 +28,7 @@ def main():
         return resp
 
     s = rospy.Service("osm_global_search",GlobalSearch,service_callback)
-    rospy.loginfo("OSM Global search service Initialized. Waiting for request ..\n")
+    # rospy.loginfo("OSM Global search service Initialized. Waiting for request ..\n")
     
     rospy.spin()
 

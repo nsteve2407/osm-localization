@@ -21,10 +21,42 @@ int main(int argc,char** argv)
 
     ROS_INFO("Starting Particle Filter");  
 
-    std::shared_ptr<osm_loc_v2> pf_ptr(new osm_loc_v2);
-    ROS_INFO("Particle Filter Initialized");
-    pf_ptr->attach_callback();
+    
+    std::string path;
+    int global_search_topX;
+    osmpf::osm_pf::f pose_angular_res; 
 
+    osmpf::osm_pf::f min_x,min_y,max_x,max_y,res_x,res_y;
+    std::string sensing_mode;
+    int resolution,num_particles;
+    nh.getParam("/osm_particle_filter/path_to_dmat",path);
+    nh.getParam("/osm_particle_filter/min_x",min_x);
+    nh.getParam("/osm_particle_filter/min_y",min_y);
+    nh.getParam("/osm_particle_filter/max_x",max_x);
+    nh.getParam("/osm_particle_filter/max_y",max_y);
+    nh.getParam("/osm_particle_filter/map_resolution",resolution);
+
+    nh.getParam("/osm_particle_filter/map_resolution_x",res_x);
+    nh.getParam("/osm_particle_filter/map_resolution_y",res_y);
+    nh.getParam("/osm_particle_filter/sensing_mode",sensing_mode);
+    nh.getParam("/osm_particle_filter/path_to_dmat",path);
+    
+    ROS_INFO("Parameters Loaded Successfully");
+
+
+    
+    osmpf::osm_pf::f seed_x,seed_y;
+    nh.getParam("/osm_particle_filter/seed_x",seed_x);
+    nh.getParam("/osm_particle_filter/seed_y",seed_y);
+    nh.getParam("/osm_particle_filter/pose_angular_res",pose_angular_res);
+    nh.getParam("/osm_particle_filter/global_search_topX",global_search_topX);
+    num_particles = int((360/pose_angular_res)*global_search_topX);
+    
+
+    std::shared_ptr<osmpf::osm_pf> pf_ptr(new osmpf::osm_pf(false,path,min_x,min_y,max_x,max_y,res_x,res_y,num_particles,seed_x,seed_y,global_search_topX,pose_angular_res));
+    pf_ptr->attach_callback_v2();
+
+    ROS_INFO("Particle Filter Initialized");
 
     while (ros::ok())
     {
