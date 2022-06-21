@@ -15,7 +15,7 @@
             "name": "ROS: Launch",
             "type": "ros",
             "request": "launch",
-            "target": "/home/mkz/catkin_ws/src/osm-localization/launch/lidar_bev.launch"
+            "target": "/home/mkz/catkin_ws/src/osm-localization/launch/osm_pf_lidar.launch"
         },
         {
             "name": "Debuf osmpf_v2",

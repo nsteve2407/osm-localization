@@ -73,6 +73,10 @@ void osm_loc_v2::init_particles_from_srv(osm_localization::GlobalSearch::Respons
     }
     osm_pf_core->num_particles = osm_pf_core->Xt.size();
 
+    osm_pf_core->w_sum_sq = 1/(3*static_cast<osmpf::osm_pf::f>(osm_pf_core->num_particles));
+    std::cout<<"\n Weight sum sq initialized to: "<< osm_pf_core->w_sum_sq;
+    std::cout<<"\n Neff initialized to: "<< 1/osm_pf_core->w_sum_sq;
+
     ROS_INFO("Particles intialized using Global Search");
 }   
 
@@ -92,7 +96,10 @@ void osm_loc_v2::osm_v2_callback(const nav_msgs::OdometryConstPtr& odom,const se
             ROS_INFO("Global Search completed");
             init_particles_from_srv(srv_msg.response);
             kidnapped=false;
-            // osm_pf_core->sync_v2->registerCallback(boost::bind(&osm_loc_v2::osm_v2_callback,this,_1,_2,_3));
+            osm_pf_core->publish_msg(osm_pf_core->Xt,osm_pf_core->Wt,odom->header);
+            // osm_pf_core->sync_v2.reset(new osmpf::osm_pf::Sync_v2(osmpf::osm_pf::sync_policy_osm_locv2(osm_pf_core->sync_queue_size),osm_pf_core->odom_sub,osm_pf_core->pc_sub,osm_pf_core->img_sub));
+            // osm_pf_core->sync_v2->registerCallback(boost::bind(&osmpf::osm_pf::callback_v2_,osm_pf_core,_1,_2,_3));
+            // ROS_INFO("Switch to local mode");
         }
         else
         {

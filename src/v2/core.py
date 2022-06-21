@@ -54,7 +54,7 @@ class osm_v2():
         return bev_image
 
     def idx2coord(self,idx,idy):
-        return self.origin_y+idy*self.res_y,self.origin_x+idx*self.res_x
+        return self.origin_x+idy*self.res_x,self.origin_y+idx*self.res_y
 
     def coord2idx(self,e,n):
         return int(np.round((n-self.origin_y)/self.res_y))-1,int(np.round((e-self.origin_x)/self.res_x))-1
@@ -257,12 +257,12 @@ class osm_v2():
         self.map_view_df.sort_values(by='similarity',inplace=True,ascending=False)
         # self.map_view_df = self.map_view_df[self.map_view_df['similarity']>=0.65]
 
-        return self.map_view_df.iloc[:X,:].copy()
+        return self.map_view_df.iloc[:X,:]
         # return self.map_view_df
 
-    def findGolbaltopX_descriptor(self,scanImage,X,init_guess=[0.0,0.0,0.0]):
-        if init_guess[0]!=0.0 or init_guess[1]!=0.0 or init_guess[2]!=0.0:
-            y,x,R=init_guess
+    def findGolbaltopX_descriptor(self,scanImage,X,init_guess=None):
+        if init_guess!=None:
+            x,y,R=init_guess
             df = self.map_view_df[(self.map_view_df.e>x-R) & (self.map_view_df.e<x+R) & (self.map_view_df.n>y-R )& (self.map_view_df.n<y+R)]
         else:
             df = self.map_view_df.copy()

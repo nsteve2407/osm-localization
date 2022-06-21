@@ -41,8 +41,8 @@
 <node name="tf_map2" pkg="tf" type="static_transform_publisher" args=" 0 0 0 0 0 0 1 osm_pose_estimate os_sensor 100" />
 
 
-<!-- <node name="logger" pkg="osm_localization" type="error_log.py" /> -->
+<node name="logger" pkg="osm_localization" type="error_log.py" />
 
-<node name="bag_play" pkg="rosbag" type="play" args="--clock /home/mkz/bag_files/12-09-21/calibration_raw.bag "/>
+<node name="bag_play" pkg="rosbag" type="play" args="--clock /home/mkz/bag_files/12-09-21/calibration_raw.bag  "/>
 
 </launch>

@@ -20,7 +20,7 @@ def main():
         df = search.findGolbaltopX_descriptor(img,global_search_topX,[req.seed_x,req.seed_y,req.range])
         poses = []
         for i in range(df.shape[0]):
-            poses.append(Pose2D(df.n.iloc[i],df.e.iloc[i],0.0))
+            poses.append(Pose2D(df.e.iloc[i],df.n.iloc[i],0.0))
      
         resp = GlobalSearchResponse()
         resp.matches = poses

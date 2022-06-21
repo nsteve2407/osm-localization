@@ -114,7 +114,7 @@ namespace osmpf
         std::vector<f> find_Wt(std::vector<pose> Xtbar,sensor_msgs::PointCloud2 p_cloud);
         std::vector<pose> sample_xt(std::vector<pose> Xbar_t,std::vector<f>& Wt);
         void callback(const nav_msgs::OdometryConstPtr&,const sensor_msgs::PointCloud2ConstPtr&);
-        void callback(const nav_msgs::OdometryConstPtr&,const sensor_msgs::PointCloud2ConstPtr&,const sensor_msgs::Image::ConstPtr img);
+        void callback_v2_(const nav_msgs::OdometryConstPtr&,const sensor_msgs::PointCloud2ConstPtr&,const sensor_msgs::Image::ConstPtr img);
         pcl::PointCloud<pcl::PointXYZI>::Ptr drop_zeros(sensor_msgs::PointCloud2 p_cloud);
         void setSeed(f x,f y);
         pcl::PointCloud<pcl::PointXYZI>::Ptr downsize(pcl::PointCloud<pcl::PointXYZI>::Ptr);

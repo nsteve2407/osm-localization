@@ -268,9 +268,9 @@ osm_pf::osm_pf(std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y,f map_r
     prev_odom.twist.twist.angular.x = 0.;
     prev_odom.twist.twist.angular.y = 0.;
     prev_odom.twist.twist.angular.z = 0.;
-    std::cout<<"\n Weight sum sq initialized to: "<< w_sum_sq;
-    std::cout<<"\n Neff initialized to: "<< 1/w_sum_sq;
-    ROS_INFO("\nParticles initialized");
+    // std::cout<<"\n Weight sum sq initialized to: "<< w_sum_sq;
+    // std::cout<<"\n Neff initialized to: "<< 1/w_sum_sq;
+    // ROS_INFO("\nParticles initialized");
 
 }
 
@@ -355,8 +355,8 @@ osm_pf::osm_pf(bool v2,std::string path_to_d_mat,f min_x,f min_y,f Max_x,f Max_y
     prev_odom.twist.twist.angular.x = 0.;
     prev_odom.twist.twist.angular.y = 0.;
     prev_odom.twist.twist.angular.z = 0.;
-    std::cout<<"\n Weight sum sq initialized to: "<< w_sum_sq;
-    std::cout<<"\n Neff initialized to: "<< 1/w_sum_sq;
+    // std::cout<<"\n Weight sum sq initialized to: "<< w_sum_sq;
+    // std::cout<<"\n Neff initialized to: "<< 1/w_sum_sq;
     
 
 }
@@ -1083,8 +1083,10 @@ void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs:
     {
 
         // std::cout<<"\n Weight sum sq: "<< w_sum_sq;
-        // std::cout<<"\n Number of effective particles: "<< n_eff;
-        if(N_eff < ((f(num_particles))/3.0) || count>resampling_count)
+        std::cout<<"\n Number of total particles: "<< num_particles;
+        std::cout<<"\n Number of effective particles: "<< N_eff;
+        if(N_eff < ((f(num_particles))/4.0)  || count>resampling_count)
+        // if((N_eff <(f)250.0 && count>1) || count>resampling_count)
         {
             std_dibn();
             ROS_INFO("Resampling.Number of effective particles: %f",N_eff);
@@ -1608,8 +1610,9 @@ std::vector<osm_pf_stereo::f> osm_pf_stereo::find_Wt_s(std::vector<pose> Xtbar,s
 
 
 // Dummy function for v2
-void osm_pf::callback(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs::PointCloud2ConstPtr& z_ptr,const sensor_msgs::Image::ConstPtr img)
+void osm_pf::callback_v2_(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs::PointCloud2ConstPtr& z_ptr,const sensor_msgs::Image::ConstPtr img)
 {
+    ROS_INFO("Local Callback called");
     nav_msgs::Odometry u = *u_ptr;
     sensor_msgs::PointCloud2 z = *z_ptr;
     

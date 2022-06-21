@@ -72,11 +72,11 @@ map_resolution_y : 1.500093213502397
 # map_resolution_y : 1.4999315408538794
 num_particles : 100000
 down_sample_size : 3.0
-init_cov_linear : 1000.0
+init_cov_linear : 2000
 init_cov_angular : 1.57
 odom_cov_lin : 0.1
-odom_cov_angular : 0.05
-resampling_count : 15
+odom_cov_angular : 0.01
+resampling_count : 30
 
 use_pi_weighting : true
 use_pi_resampling : false
@@ -109,5 +109,5 @@ img_size_y : 640
 
 # Params specific to v2
 global_search_topX : 1000
-pose_angular_res : 10.0 #Angular resolution in degrees for global search step 2
-path_to_map_df : /home/mkz/catkin_ws/src/osm-localization/distance_maps/run1_df.pkl
+pose_angular_res : 3.0 #Angular resolution in degrees for global search step 2
+path_to_map_df : /home/mkz/catkin_ws/src/osm-localization/distance_maps/run1_df_corrected.pkl
