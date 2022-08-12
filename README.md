@@ -1,7 +1,7 @@
 # osm-localization
 Particle Filter based localization on Open Street maps
 
-![](demo.gif)
+![](https://github.com/nsteve2407/osm-localization/blob/main/demo2.gif)
           
  - An implementation of a particle filter for vision aided localization on Open Street Maps. 
  - Currently supports both LiDAR and stero cameras as visual sensors. 
