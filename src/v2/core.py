@@ -277,6 +277,53 @@ class osm_v2():
 
         return df.iloc[:X,:]
         # return self.map_view_df
+
+    def find_descriptor_Pose(self,top100,scanImage,X,angular_res):
+        query_descriptor = self.findRoadDescriptor(scanImage,self.ranges)
+        poses=[]
+        for i in range(top100.shape[0]):
+
+            descr_2d = top100.descriptor2d.iloc[i]
+            
+            p = []
+            max_score = 0.0
+            for phi in np.arange(0,360,angular_res):
+                d2d = np.roll(descr_2d,phi,axis=-1)
+                score = np.sum(np.multiply(d2d,query_descriptor))
+                if score>max_score:                
+                    p=[top100.idx.iloc[i],top100.idy.iloc[i],top100.e.iloc[i],top100.n.iloc[i],np.deg2rad(phi),d2d,score]
+                    max_score = score
+            if len(p)>0:
+                poses.append(p)
+
+        # df = pd.DataFrame([poses],columns=['idx','idy','e','n','phi','mapview','score'])
+        df = pd.DataFrame(poses,columns=['idx','idy','e','n','phi','descriptor2d','score'])
+        df.sort_values(by=['score'],ascending=False,inplace=True)
+        return df
+
+    def find_descriptor_Pose2(self,top100,scanImage,X,angular_res):
+        query_descriptor = self.findRoadDescriptor(scanImage,self.ranges)
+        poses=[]
+        for i in range(top100.shape[0]):
+
+            descr_2d = top100.descriptor2d.iloc[i]
+            
+            
+            for phi in np.arange(0,360,angular_res):
+                d2d = np.roll(descr_2d,phi,axis=-1)
+                # score = np.sum(np.multiply(d2d,query_descriptor))
+                               
+                p=[top100.idx.iloc[i],top100.idy.iloc[i],top100.e.iloc[i],top100.n.iloc[i],np.deg2rad(phi),d2d]
+                
+                # if len(p)>0:
+                poses.append(p)
+
+        # df = pd.DataFrame([poses],columns=['idx','idy','e','n','phi','mapview','score'])
+        df = pd.DataFrame(poses,columns=['idx','idy','e','n','phi','descriptor2d'])
+        df['score'] = df.descriptor2d.apply(lambda x:np.sum(np.multiply(x,query_descriptor)))
+        df.sort_values(by=['score'],ascending=False,inplace=True)
+        return df
+
     def findPose(self,scanImage,X,angular_res):
         top100 = self.findGolbaltopX(scanImage,X)
         countScanImage = np.linalg.norm(scanImage)**2
