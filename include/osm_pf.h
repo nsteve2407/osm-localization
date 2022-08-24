@@ -139,6 +139,7 @@ namespace osmpf
         bool is_kidnapped();
         void callback_v2_(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs::PointCloud2ConstPtr& z_ptr,const sensor_msgs::Image::ConstPtr img);
         void attach_callback_v2();
+        void init_particles_from_srv_v2(osm_localization::GlobalSearch::Response r);
 
     };
 

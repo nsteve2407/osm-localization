@@ -6,8 +6,6 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
-        - /MarkerArray1
-        - /MarkerArray1/Namespaces1
         - /Odometry1/Shape1
         - /Pose1
         - /PointStamped1
@@ -58,19 +56,6 @@ Visualization Manager:
       Plane: XY
       Plane Cell Count: 10
       Reference Frame: <Fixed Frame>
-      Value: true
-    - Class: rviz/MarkerArray
-      Enabled: true
-      Marker Topic: visualization_marker_array
-      Name: MarkerArray
-      Namespaces:
-        bounds_osm: true
-        buildings_osm: true
-        other_osm: true
-        railroad_osm: true
-        roads_osm: true
-        waypoints_osm: true
-      Queue Size: 100
       Value: true
     - Class: agni_tf_tools/Static Transform Publisher
       Enabled: true
@@ -151,11 +136,11 @@ Visualization Manager:
       History Length: 1
       Name: PointStamped
       Queue Size: 10
-      Radius: 15
+      Radius: 10
       Topic: /gps_utm
       Unreliable: false
       Value: true
-    - Alpha: 1
+    - Alpha: 0.10000000149011612
       Arrow Length: 10
       Axes Length: 0.30000001192092896
       Axes Radius: 0.009999999776482582
@@ -200,6 +185,19 @@ Visualization Manager:
       Use Fixed Frame: true
       Use rainbow: false
       Value: true
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: visualization_marker_array
+      Name: MarkerArray
+      Namespaces:
+        bounds_osm: true
+        buildings_osm: true
+        other_osm: true
+        railroad_osm: true
+        roads_osm: true
+        waypoints_osm: true
+      Queue Size: 100
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 238; 238; 236
@@ -228,7 +226,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 775.3155517578125
+      Distance: 11570.294921875
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -236,17 +234,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 4584.8876953125
-        Y: 6222.3251953125
-        Z: 197.8590087890625
+        X: 4069.16015625
+        Y: 5636.44970703125
+        Z: 246.73414611816406
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.5347963571548462
+      Pitch: 1.5697963237762451
       Target Frame: <Fixed Frame>
-      Yaw: 5.36042594909668
+      Yaw: 4.638614177703857
     Saved: ~
 Window Geometry:
   Displays:
@@ -265,4 +263,4 @@ Window Geometry:
     collapsed: true
   Width: 960
   X: 2010
-  Y: 27
+  Y: 248

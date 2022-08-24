@@ -17,10 +17,13 @@ def main():
     def service_callback(req):
         # print(type(srv_msg))
         img = ros_numpy.numpify(req.lidar_bev_image)/255
-        df = search.findGolbaltopX_descriptor(img,global_search_topX,[req.seed_x,req.seed_y,req.range])
+        query_desc_2d  = search.findRoadDescriptor(img,search.ranges)
+        df = search.findGolbaltopX_descriptor(img,query_desc_2d,global_search_topX,[req.seed_x,req.seed_y,req.range])
+        # df = search.find_descriptor_Pose(df,query_desc_2d,30) #Pose search step
         poses = []
-        for i in range(df.shape[0]):
-            poses.append(Pose2D(df.e.iloc[i],df.n.iloc[i],0.0))
+        topX = global_search_topX
+        for i in range(topX):
+            poses.append(Pose2D(df.e.iloc[i],df.n.iloc[i],0))
      
         resp = GlobalSearchResponse()
         resp.matches = poses

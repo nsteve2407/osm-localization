@@ -260,14 +260,13 @@ class osm_v2():
         return self.map_view_df.iloc[:X,:]
         # return self.map_view_df
 
-    def findGolbaltopX_descriptor(self,scanImage,X,init_guess=None):
+    def findGolbaltopX_descriptor(self,scanImage,q_dec2d,X,init_guess=None):
         if init_guess!=None:
             x,y,R=init_guess
             df = self.map_view_df[(self.map_view_df.e>x-R) & (self.map_view_df.e<x+R) & (self.map_view_df.n>y-R )& (self.map_view_df.n<y+R)]
         else:
             df = self.map_view_df.copy()
         query_pixel_count = (np.linalg.norm(scanImage))**2
-        q_dec2d = self.findRoadDescriptor(scanImage,self.ranges)
         q_dec1d = q_dec2d.sum(axis=-1)
         df['diff1d']=df.descriptor1d.apply(lambda x:np.linalg.norm(x-q_dec1d))
         df['diffnorm']=np.abs(df['pixel_count']-query_pixel_count)
@@ -278,8 +277,7 @@ class osm_v2():
         return df.iloc[:X,:]
         # return self.map_view_df
 
-    def find_descriptor_Pose(self,top100,scanImage,X,angular_res):
-        query_descriptor = self.findRoadDescriptor(scanImage,self.ranges)
+    def find_descriptor_Pose(self,top100,query_descriptor,angular_res):
         poses=[]
         for i in range(top100.shape[0]):
 

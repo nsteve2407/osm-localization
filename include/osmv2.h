@@ -18,6 +18,7 @@ class osm_loc_v2
     // Methods
     osm_loc_v2();
     void init_particles_from_srv(osm_localization::GlobalSearch::Response r);
+    void init_particles_from_srv_v2(osm_localization::GlobalSearch::Response r);
     bool is_kidnapped();
     void osm_v2_callback(const nav_msgs::OdometryConstPtr&,const sensor_msgs::PointCloud2ConstPtr&,const sensor_msgs::ImageConstPtr&);
     void attach_callback();

@@ -78,7 +78,79 @@ void osm_loc_v2::init_particles_from_srv(osm_localization::GlobalSearch::Respons
     std::cout<<"\n Neff initialized to: "<< 1/osm_pf_core->w_sum_sq;
 
     ROS_INFO("Particles intialized using Global Search");
-}   
+}
+
+void osm_loc_v2::init_particles_from_srv_v2(osm_localization::GlobalSearch::Response r)
+{   
+    
+    osmpf::pose p,p2;
+    osmpf::osm_pf::f max_d = 2000.0;
+    for(int i=0;i<r.matches.size();i++)
+    {
+
+        // p = osmpf::pose(osmpf::osm_pf::f(r.matches[i].x),osmpf::osm_pf::f(r.matches[i].y), osmpf::osm_pf::f(r.matches[i].theta));
+        // osm_pf_core->Xt.push_back(p);
+        // // Opposite Side
+        // p.theta = r.matches[i].theta + M_PI ;
+        // p.x = r.matches[i].x ;
+        // p.y = r.matches[i].y ;
+        
+        // osm_pf_core->Xt.push_back(p);
+        for(osmpf::osm_pf::f d=0.0;d<max_d;d+=1.0)
+        {
+            p.x = r.matches[i].x + d*cos(r.matches[i].theta);
+            p.y = r.matches[i].y +d*sin(r.matches[i].theta);
+            p.theta = r.matches[i].theta;
+            osm_pf_core->Xt.push_back(p);
+
+            // Opposite Side
+            // p2.theta = r.matches[i].theta + M_PI;
+            // p2.x = r.matches[i].x + d*cos(p.theta);
+            // p2.y = r.matches[i].y +d*sin(p.theta);
+            
+            // osm_pf_core->Xt.push_back(p2);
+
+        }
+        for(osmpf::osm_pf::f j=0.0;j<360.0;j+=pose_angular_res)
+        {
+        p = osmpf::pose (osmpf::osm_pf::f(r.matches[i].x),osmpf::osm_pf::f(r.matches[i].y), osmpf::osm_pf::f((j*M_PI)/180.0));
+        osm_pf_core->Xt.push_back(p);
+        }
+    }
+
+    for(int i=0;i<osm_pf_core->Xt.size();i++)
+    {
+        std::cout<<"X:"<<osm_pf_core->Xt[i].x<<" Y:"<<osm_pf_core->Xt[i].y<<" Theta:"<<osm_pf_core->Xt[i].theta<<std::endl;
+    }
+    
+    osm_pf_core->w_sum_sq = 1/(2*static_cast<osmpf::osm_pf::f>(osm_pf_core->Xt.size()));
+
+    if(osm_pf_core->use_pi_weighting && osm_pf_core->use_pi_resampling)
+    {
+        osm_pf_core->Wt = std::vector<osmpf::osm_pf::f>(osm_pf_core->Xt.size(),1.0);
+    }
+    else if (osm_pf_core->use_pi_weighting && !osm_pf_core->use_pi_resampling)
+    {
+        osm_pf_core->Wt  = std::vector<osmpf::osm_pf::f>(osm_pf_core->Xt.size(),1.0);
+    }
+    else if(!osm_pf_core->use_pi_weighting && osm_pf_core->use_pi_resampling)
+    
+    {
+        osm_pf_core->Wt  = std::vector<osmpf::osm_pf::f>(osm_pf_core->Xt.size(),1.0);
+    }
+    else
+    {
+        osm_pf_core->Wt  = std::vector<osmpf::osm_pf::f>(osm_pf_core->Xt.size(),0.0);
+    }
+    osm_pf_core->num_particles = osm_pf_core->Xt.size();
+
+    osm_pf_core->w_sum_sq = 1/(3*static_cast<osmpf::osm_pf::f>(osm_pf_core->num_particles));
+    
+    std::cout<<"\n Neff initialized to: "<< 1/osm_pf_core->w_sum_sq;
+    std::cout<<"\n Weight sum sq initialized to: "<< osm_pf_core->w_sum_sq;
+    ROS_INFO("Using 2 Step orientation search");
+    ROS_INFO("Particles intialized using Global Search");
+}  
 
 void osm_loc_v2::osm_v2_callback(const nav_msgs::OdometryConstPtr& odom,const sensor_msgs::PointCloud2ConstPtr& pc,const sensor_msgs::ImageConstPtr& lidar_bev_img)
 {
@@ -94,7 +166,7 @@ void osm_loc_v2::osm_v2_callback(const nav_msgs::OdometryConstPtr& odom,const se
         if( global_search.call(srv_msg.request,srv_msg.response))
         {
             ROS_INFO("Global Search completed");
-            init_particles_from_srv(srv_msg.response);
+            init_particles_from_srv_v2(srv_msg.response);
             kidnapped=false;
             osm_pf_core->publish_msg(osm_pf_core->Xt,osm_pf_core->Wt,odom->header);
             // osm_pf_core->sync_v2.reset(new osmpf::osm_pf::Sync_v2(osmpf::osm_pf::sync_policy_osm_locv2(osm_pf_core->sync_queue_size),osm_pf_core->odom_sub,osm_pf_core->pc_sub,osm_pf_core->img_sub));

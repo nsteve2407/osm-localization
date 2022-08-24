@@ -74,9 +74,9 @@ num_particles : 100000
 down_sample_size : 3.0
 init_cov_linear : 3000
 init_cov_angular : 1.57
-odom_cov_lin : 0.1
+odom_cov_lin : 0.2
 odom_cov_angular : 0.01
-resampling_count : 30
+resampling_count : 15
 
 use_pi_weighting : true
 use_pi_resampling : true

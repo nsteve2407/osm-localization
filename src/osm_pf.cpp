@@ -1828,6 +1828,75 @@ void osm_pf::init_particles_from_srv(osm_localization::GlobalSearch::Response r)
     ROS_INFO("Particles intialized using Global Search");
 }   
 
+
+void osm_pf::init_particles_from_srv_v2(osm_localization::GlobalSearch::Response r)
+{   
+    
+    osmpf::pose p;
+    osmpf::osm_pf::f max_d = 400.0;
+    std::uniform_real_distribution<f> distribution_x(-max_d,max_d);
+    std::uniform_real_distribution<f> distribution_theta(0,(f)M_PI*2);
+    std::default_random_engine gen;
+    int particles_per_hit = 8000;
+
+    for(int i=0;i<r.matches.size();i++)
+    {
+
+        // Init along orientation angle
+        // for(osmpf::osm_pf::f d=0.0;d<max_d;d+=1.0)
+        // {
+        //     p.x = r.matches[i].x + d*cos(r.matches[i].theta);
+        //     p.y = r.matches[i].y +d*sin(r.matches[i].theta);
+        //     p.theta = r.matches[i].theta;
+        //     Xt.push_back(p);
+
+        //     // Opposite Side
+        //     p.theta = r.matches[i].theta + M_PI;
+        //     p.x = r.matches[i].x + d*cos(p.theta);
+        //     p.y = r.matches[i].y +d*sin(p.theta);
+            
+        //     Xt.push_back(p);
+
+        // }
+
+        // Initialize in area aorund pose
+        for(int j=0;j<particles_per_hit;j++)
+        {
+            p.x = r.matches[i].x + distribution_x(gen);
+            p.y = r.matches[i].y + distribution_x(gen);
+            p.theta = r.matches[i].theta + distribution_theta(gen);
+            Xt.push_back(p);
+        }
+
+    }
+    w_sum_sq = 1/(2*static_cast<osmpf::osm_pf::f>(Xt.size()));
+
+    if(use_pi_weighting && use_pi_resampling)
+    {
+        Wt = std::vector<osmpf::osm_pf::f>(Xt.size(),1.0);
+    }
+    else if (use_pi_weighting && !use_pi_resampling)
+    {
+        Wt  = std::vector<osmpf::osm_pf::f>(Xt.size(),1.0);
+    }
+    else if(!use_pi_weighting && use_pi_resampling)
+    
+    {
+        Wt  = std::vector<osmpf::osm_pf::f>(Xt.size(),1.0);
+    }
+    else
+    {
+        Wt  = std::vector<osmpf::osm_pf::f>(Xt.size(),0.0);
+    }
+    num_particles = Xt.size();
+
+    w_sum_sq = 1/(3*static_cast<osmpf::osm_pf::f>(num_particles));
+    std::cout<<"\n Weight sum sq initialized to: "<< w_sum_sq;
+    std::cout<<"\n Neff initialized to: "<< 1/w_sum_sq;
+
+    ROS_INFO("Particles intialized using Global Search");
+}  
+
 bool osm_pf::is_kidnapped()
 {
     return N_eff==0.0?true:false;
