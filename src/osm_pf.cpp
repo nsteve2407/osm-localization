@@ -1002,7 +1002,10 @@ void osm_pf_stereo::publish_msg_stereo(std::vector<pose> X,std::vector<f> W,std_
     avg_x = avg_x/weight_sum;
     avg_y = avg_y/weight_sum;
     avg_theta = avg_theta/weight_sum;
-
+    if(weight_sum<(0.00001*num_particles))
+    {
+        kidnapped = true;
+    }
     if(isnan(avg_x) || isnan(avg_y) || isnan(avg_theta))
     {
         // pose_avg.pose.orientation = tf::createQuaternionMsgFromYaw(X[max_idx].theta);
