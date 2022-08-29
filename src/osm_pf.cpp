@@ -1631,7 +1631,7 @@ void osm_pf::callback_v2_(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_m
         if( global_search.call(srv_msg.request,srv_msg.response))
         {
             ROS_INFO("Global Search completed");
-            init_particles_from_srv_v2(srv_msg.response);
+            init_particles_from_srv(srv_msg.response);
             kidnapped=false;
             publish_msg(Xt,Wt,u_ptr->header);
             // osm_pf_core->sync_v2.reset(new osmpf::osm_pf::Sync_v2(osmpf::osm_pf::sync_policy_osm_locv2(osm_pf_core->sync_queue_size),osm_pf_core->odom_sub,osm_pf_core->pc_sub,osm_pf_core->img_sub));
@@ -1672,7 +1672,7 @@ void osm_pf::callback_v2_(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_m
             if(N_eff < ((f(num_particles))/3.0) || count>resampling_count)
             {
                 std_dibn();
-                if(N_eff<2000)
+                if(N_eff<f(4000))
                 {
                     kidnapped = true;
                     ROS_INFO("Kidnapped! Re-Initializing particles..");
@@ -1841,11 +1841,11 @@ void osm_pf::init_particles_from_srv_v2(osm_localization::GlobalSearch::Response
 {   
     
     osmpf::pose p;
-    osmpf::osm_pf::f max_d = 400.0;
+    osmpf::osm_pf::f max_d = 200.0;
     std::uniform_real_distribution<f> distribution_x(-max_d,max_d);
     std::uniform_real_distribution<f> distribution_theta(0,(f)M_PI*2);
     std::default_random_engine gen;
-    int particles_per_hit = 8000;
+    int particles_per_hit = 5000;
 
     for(int i=0;i<r.matches.size();i++)
     {

@@ -2,7 +2,7 @@
 
 <launch>
 
-<arg name="url" default="package://osm_cartography/tests/calibration_raw.osm" />
+<arg name="url" default="package://osm_cartography/tests/w_osr_crop.osm" />
 
 <!-- <arg name="url" default="package://osm_cartography/tests/tamu_map.osm" /> -->
 
@@ -16,7 +16,7 @@
 <include file="$(find osm_localization)/launch/ouster_driver.launch" />
 <arg name="config_file" default="/home/mkz/catkin_ws/src/osm-localization/config/v2/config.yaml" />
 <rosparam command="load" file="$(arg config_file)" ns="osm_particle_filter" />
-<node name="osm_global_search_server" pkg="osm_localization" type="global_search_server.py"/>
+<node name="osm_global_search_server" pkg="osm_localization" type="global_search_server.py" output="screen"/>
 <node name="vehicle_odometry" pkg="osm_localization" type="odometry.py"/>
 <!-- <node name="tf_imu_base" pkg="tf" type="static_transform_publisher" args=" 0 0 0 0 0 0 base_footprint imu_link 100" output="screen" /> -->
 <!-- <include file="$(find robot_localization)/launch/ekf_template.launch" /> -->
@@ -42,7 +42,5 @@
 
 
 <node name="logger" pkg="osm_localization" type="error_log.py" />
-
-<node name="bag_play" pkg="rosbag" type="play" args="--clock /home/mkz/bag_files/12-09-21/calibration_raw.bag -r 0.5  "/>
 
 </launch>

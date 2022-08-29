@@ -4,7 +4,7 @@ from core import *
 from sensor_msgs.msg import Image,PointCloud2
 
 
-save=True
+save=False
 
 class bev_pub():
     def __init__(self):

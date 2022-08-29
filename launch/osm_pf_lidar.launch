@@ -22,9 +22,9 @@
 
 </node>
 
-<arg name="url" default="package://osm_cartography/tests/calibration_raw.osm" />
+<!-- <arg name="url" default="package://osm_cartography/tests/calibration_raw.osm" /> -->
 
-<!-- <arg name="url" default="package://osm_cartography/tests/tamu_map.osm" /> -->
+<arg name="url" default="package://osm_cartography/tests/w_osr_crop.osm" />
 
 <!-- start map server -->
 <node pkg="osm_cartography" type="osm_server" name="osm_server" />
@@ -38,7 +38,6 @@
 
 
 <node name="logger" pkg="osm_localization" type="error_log.py" />
-
-<node name="bag_play" pkg="rosbag" type="play" args="--clock /home/mkz/bag_files/12-09-21/calibration_raw.bag "/>
+<node name="bag_play" pkg="rosbag" type="play" args="--clock /home/mkz/bag_files/12-09-21/unseen_test.bag "/>
 
 </launch>

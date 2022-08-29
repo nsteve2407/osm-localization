@@ -282,10 +282,12 @@ class osm_v2():
         for i in range(top100.shape[0]):
 
             descr_2d = top100.descriptor2d.iloc[i]
+            print(descr_2d.shape)
             
             p = []
             max_score = 0.0
             for phi in np.arange(0,360,angular_res):
+                
                 d2d = np.roll(descr_2d,phi,axis=-1)
                 score = np.sum(np.multiply(d2d,query_descriptor))
                 if score>max_score:                
