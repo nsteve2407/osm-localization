@@ -1631,7 +1631,7 @@ void osm_pf::callback_v2_(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_m
         if( global_search.call(srv_msg.request,srv_msg.response))
         {
             ROS_INFO("Global Search completed");
-            init_particles_from_srv(srv_msg.response);
+            init_particles_from_srv_v2(srv_msg.response);
             kidnapped=false;
             publish_msg(Xt,Wt,u_ptr->header);
             // osm_pf_core->sync_v2.reset(new osmpf::osm_pf::Sync_v2(osmpf::osm_pf::sync_policy_osm_locv2(osm_pf_core->sync_queue_size),osm_pf_core->odom_sub,osm_pf_core->pc_sub,osm_pf_core->img_sub));
@@ -1672,6 +1672,11 @@ void osm_pf::callback_v2_(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_m
             if(N_eff < ((f(num_particles))/3.0) || count>resampling_count)
             {
                 std_dibn();
+                if(N_eff<2000)
+                {
+                    kidnapped = true;
+                    ROS_INFO("Kidnapped! Re-Initializing particles..");
+                }
                 ROS_INFO("Resampling.Number of effective particles: %f",N_eff);
                 if(adaptive_mode)
                 {
