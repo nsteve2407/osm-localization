@@ -111,5 +111,6 @@ img_size_y : 640
 
 # Params specific to v2
 global_search_topX : 2000
+local_topX : 20
 pose_angular_res : 20 #Angular resolution in degrees for global search step 2
 path_to_map_df : /home/mkz/catkin_ws/src/osm-localization/distance_maps/w_osr_df.pkl

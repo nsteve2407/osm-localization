@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+
+<launch>
+
+<arg name="url" default="package://osm_cartography/tests/w_osr_crop.osm" />
+
+<!-- <arg name="url" default="package://osm_cartography/tests/tamu_map.osm" /> -->
+
+<!-- start map server -->
+<node pkg="osm_cartography" type="osm_server" name="osm_server" />
+
+<!-- start map visualization -->
+<node pkg="osm_cartography" type="viz_osm" name="viz_osm" >
+<param name="map_url" value="$(arg url)" />
+</node>
+<include file="$(find osm_localization)/launch/ouster_driver.launch" />
+<arg name="config_file" default="/home/mkz/catkin_ws/src/osm-localization/config/v2/config.yaml" />
+<rosparam command="load" file="$(arg config_file)" ns="osm_particle_filter" />
+
+
+<include file="$(find road_seg_deeplabv3)/launch/s-layer.launch" />
+
+<node name="lidar_bev" pkg="osm_localization" type="lidar_bev.py" output="screen" />
+
+<node name="descriptor_search" pkg="osm_localization" type="road_descriptor.py" output="screen"/>
+
+
+<node name="tf_map" pkg="tf" type="static_transform_publisher" args=" 738912.92 3392799.59 0 0 0 0 1 map local_map 100" />
+<node name="tf_map2" pkg="tf" type="static_transform_publisher" args=" 0 0 0 0 0 0 1 osm_pose_estimate os_sensor 100" />
+
+<node name="bag_play" pkg="rosbag" type="play" args="--clock /home/mkz/bag_files/12-09-21/unseen_test.bag -r 0.5  "/>
+</launch>

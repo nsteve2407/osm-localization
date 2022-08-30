@@ -31,6 +31,10 @@ add_service_files(
   FILES
   GlobalSearch.srv
 )
+add_message_files(  
+  FILES
+  PoseArray2D.msg
+)
 generate_messages(
   DEPENDENCIES
   geometry_msgs

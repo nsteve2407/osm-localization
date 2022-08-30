@@ -282,7 +282,7 @@ class osm_v2():
         for i in range(top100.shape[0]):
 
             descr_2d = top100.descriptor2d.iloc[i]
-            print(descr_2d.shape)
+            # print(descr_2d.shape)
             
             p = []
             max_score = 0.0
