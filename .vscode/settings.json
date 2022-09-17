@@ -5,7 +5,8 @@
     ],
     "python.analysis.extraPaths": [
         "/home/mkz/catkin_ws/devel/lib/python3/dist-packages",
-        "/opt/ros/noetic/lib/python3/dist-packages"
+        "/opt/ros/noetic/lib/python3/dist-packages",
+        "./src/v2"
     ],
     "files.associations": {
         "ostream": "cpp",

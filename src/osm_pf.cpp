@@ -1914,3 +1914,16 @@ void osm_pf::attach_callback_v2()
 {
     sync_v2->registerCallback(boost::bind(&osm_pf::callback_v2_,this,_1,_2,_3));
 }
+
+// Measurement update functions using descriptors
+
+Eigen::ArrayXXf img_to_descriptor(sensor_msgs::Image::ConstPtr& img)
+{
+    
+    Eigen::ArrayXXf desc();
+
+
+
+
+    return desc;
+}

@@ -140,7 +140,10 @@ namespace osmpf
         void callback_v2_(const nav_msgs::OdometryConstPtr& u_ptr,const sensor_msgs::PointCloud2ConstPtr& z_ptr,const sensor_msgs::Image::ConstPtr img);
         void attach_callback_v2();
         void init_particles_from_srv_v2(osm_localization::GlobalSearch::Response r);
-
+        Eigen::ArrayXXf img_to_descriptor(sensor_msgs::Image::ConstPtr& img);
+        Eigen::ArrayXXf descriptor_from_pose(pose xt);
+        f find_wt_descriptor(pose xbar,Eigen::ArrayXXf z_star,Eigen::ArrayXXf z);
+        std::vector<f> find_Wt_descriptor(std::vector<pose> Xtbar,sensor_msgs::Image::ConstPtr& img);
     };
 
     class osm_pf_stereo: public osm_pf
