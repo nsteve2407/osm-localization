@@ -257,8 +257,8 @@ class osm_v2():
         self.map_view_df.sort_values(by='similarity',inplace=True,ascending=False)
         # self.map_view_df = self.map_view_df[self.map_view_df['similarity']>=0.65]
 
-        return self.map_view_df.iloc[:X,:]
-        # return self.map_view_df
+        # return self.map_view_df.iloc[:X,:]
+        return self.map_view_df
 
     def findGolbaltopX_descriptor(self,scanImage,q_dec2d,X,init_guess=None):
         if init_guess!=None:
@@ -275,6 +275,7 @@ class osm_v2():
         # df = df[df['similarity']>=0.65]
 
         return df.iloc[:X,:]
+        # return df
         # return self.map_view_df
 
     def find_descriptor_Pose(self,top100,query_descriptor,angular_res):
@@ -362,7 +363,45 @@ class osm_v2():
         d = img[indxy[:,0],indxy[:,1]]
         return d
 
+    def findIndxAtRange_frontal(self,img,R):
+        cx,cy = img.shape[0]-1, img.shape[1]/2
+        f = lambda theta: [int(cx-((R*np.sin(theta))/self.res_x)),int(cy+((R*np.cos(theta))/self.res_y))]
+        indxy = np.array([f(x) for x in np.deg2rad(range(180))])
+
+        d = img[indxy[:,0],indxy[:,1]]
+        return d
+
+
     def findRoadDescriptor(self,image,Range_list):
         d = np.array([self.findIndxAtRange(image,r) for r in Range_list])
         return d
 
+    def frontal_desc_from_img(self,img,Range_list):
+        d = np.array([self.findIndxAtRange_frontal(img,r) for r in Range_list])
+        return d
+
+
+    def find_descriptor_Pose_frontal(self,top100,query_descriptor,angular_res):
+        poses=[]
+        for i in range(top100.shape[0]):
+
+            descr_2d = top100.descriptor2d.iloc[i]
+            # print(descr_2d.shape)
+            
+            p = []
+            max_score = 0.0
+            for phi in np.arange(0,360,angular_res):
+                
+                d2d = np.roll(descr_2d,phi,axis=-1)
+                d2d = d2d[:,:180] #crop frontal area
+                score = np.sum(np.multiply(d2d,query_descriptor))
+                if score>max_score:                
+                    p=[top100.idx.iloc[i],top100.idy.iloc[i],top100.e.iloc[i],top100.n.iloc[i],np.deg2rad(phi),d2d,score]
+                    max_score = score
+            if len(p)>0:
+                poses.append(p)
+
+        # df = pd.DataFrame([poses],columns=['idx','idy','e','n','phi','mapview','score'])
+        df = pd.DataFrame(poses,columns=['idx','idy','e','n','phi','descriptor2d','score'])
+        df.sort_values(by=['score'],ascending=False,inplace=True)
+        return df
