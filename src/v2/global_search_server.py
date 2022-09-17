@@ -21,6 +21,7 @@ def main():
         query_desc_2d  = search.findRoadDescriptor(img,search.ranges)
         df = search.findGolbaltopX_descriptor(img,query_desc_2d,global_search_topX,[req.seed_x,req.seed_y,req.range])
         # df = search.find_descriptor_Pose(df,query_desc_2d,ang_res) #Pose search step
+        df = search.find_descriptor_Pose_frontal(df,query_desc_2d,ang_res)
         poses = []
         topX = global_search_topX
         for i in range(topX):
