@@ -106,7 +106,12 @@ def main():
     pf_sub = mf.Subscriber('/osm_average_pose_estimate',PoseStamped)
 
     ats = mf.ApproximateTimeSynchronizer([gps_sub,pf_sub],50000,0.1)
-    ats.registerCallback(log.cb2)
+    if log.gps_only:
+        ats = mf.ApproximateTimeSynchronizer([gps_sub],50000,0.1)
+        ats.registerCallback(log.cb_gps_only)
+    else:
+        ats = mf.ApproximateTimeSynchronizer([gps_sub,pf_sub],50000,0.1)
+        ats.registerCallback(log.cb2)
 
 
     rp.spin()
