@@ -19,6 +19,7 @@ class error_log:
         self.count=0
         self.log =True
         self.gps_pub = rp.Publisher("gps_utm",PointStamped,queue_size=100)
+        self.gps_only = True
         
 
 
@@ -31,6 +32,12 @@ class error_log:
         self.pf_n.append(pf_msg.pose.position.y)
         q = (pf_msg.pose.orientation.x,pf_msg.pose.orientation.y,pf_msg.pose.orientation.z,pf_msg.pose.orientation.w)
         self.pf_theta.append(tf.transformations.euler_from_quaternion(q)[2])
+        self.count+=1
+
+    def cb_gps_only(self,gps_msg):
+        gps_lat,gps_lon,gps_alt = gps_msg.latitude,gps_msg.longitude,gps_msg.altitude
+        self.gps_e.append(gps_lat)
+        self.gps_n.append(gps_lon)
         self.count+=1
     
 
@@ -58,22 +65,23 @@ class error_log:
         vals= {'gps_e':self.gps_e,'gps_n': self.gps_n,'pf_e':self.pf_e,'pf_n':self.pf_n,'pf_theta':self.pf_theta}
         self.df = pd.DataFrame(vals)
         # self.df.to_csv('./logs_no_error.csv')
-        self.df['diff_e'] = self.df['gps_e']-self.df['pf_e']
-        self.df['diff_e']  = self.df['diff_e']**2
-        self.df['diff_n'] = self.df['gps_n']-self.df['pf_n']
-        self.df['diff_n'] = self.df['diff_n']**2
-        self.df['diff_sum'] = self.df['diff_e']+self.df['diff_n']
-        self.df['error'] = np.sqrt(self.df['diff_sum'])
-        wt_fun = str(rp.get_param("/osm_particle_filter/weight_function"))
-        mode  = str(rp.get_param("/osm_particle_filter/sensing_mode"))
-        method  = str(rp.get_param("/osm_particle_filter/method"))
-        particles =  int(rp.get_param("/osm_particle_filter/num_particles"))
-        if particles>80000:
-            scale='global'
-        else:
-            scale='local'
+        if not self.gps_only:
+            self.df['diff_e'] = self.df['gps_e']-self.df['pf_e']
+            self.df['diff_e']  = self.df['diff_e']**2
+            self.df['diff_n'] = self.df['gps_n']-self.df['pf_n']
+            self.df['diff_n'] = self.df['diff_n']**2
+            self.df['diff_sum'] = self.df['diff_e']+self.df['diff_n']
+            self.df['error'] = np.sqrt(self.df['diff_sum'])
+            wt_fun = str(rp.get_param("/osm_particle_filter/weight_function"))
+            mode  = str(rp.get_param("/osm_particle_filter/sensing_mode"))
+            method  = str(rp.get_param("/osm_particle_filter/method"))
+            particles =  int(rp.get_param("/osm_particle_filter/num_particles"))
+            if particles>80000:
+                scale='global'
+            else:
+                scale='local'
         if self.log:
-            self.df.to_csv('/home/mkz/catkin_ws/src/osm-localization/test_cases/method2/'+mode+'_'+method+'_'+scale+'_'+wt_fun+'.csv')
+            self.df.to_csv('/home/mkz/catkin_ws/src/osm-localization/test_cases/method2/global_redo_w2_osr2_'+mode+'_'+method+'_'+scale+'36'+'_'+wt_fun+'.csv')
             print('\nLog file saved !\nExiting..')
 
 log = error_log()
